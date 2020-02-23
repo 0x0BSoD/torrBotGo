@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	glh "github.com/0x0BSoD/goLittleHelpers"
+	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
+	"github.com/0x0BSoD/transmission"
 	"log"
 	"text/template"
 )
@@ -98,4 +100,100 @@ func sendJsonConfig() string {
 	}
 
 	return "```" + string(b) + "```"
+}
+
+type Torrent struct {
+	Name        string
+	Status      string
+	Icon        string
+	ErrorString string
+	Comment     string
+	Hash        string
+}
+
+func parseStatus(s int) (string, string) {
+	var icon string
+	var status string
+
+	switch s {
+	case 0:
+		icon = "⏹️️"
+		status = "Stopped"
+	case 1:
+		icon = "▶️️"
+		status = "Queued to check files"
+	case 2:
+		icon = "▶️"
+		status = "Checking files"
+	case 3:
+		icon = "▶️️"
+		status = "Queued to download"
+	case 4:
+		icon = "▶️"
+		status = "Downloading"
+	case 5:
+		icon = "▶️️"
+		status = "'Queued to seed"
+	default:
+		icon = "▶️️"
+		status = "Seeding"
+	}
+
+	return icon, status
+}
+
+type showFilter int
+
+const (
+	All showFilter = iota
+	Active
+	NotActive
+)
+
+func sendTorrent(id int64, torr *transmission.Torrent) {
+	t, err := template.ParseFiles("templates/torrentList.gotmpl")
+	if err != nil {
+		log.Panic(err)
+	}
+	var dRes bytes.Buffer
+
+	icon, status := parseStatus(torr.Status)
+
+	t.Execute(&dRes, Torrent{
+		torr.Name,
+		status,
+		icon,
+		torr.ErrorString,
+		torr.Comment,
+		torr.HashString})
+
+	msg := tgbotapi.NewMessage(id, dRes.String())
+	msg.ParseMode = "MarkdownV2"
+	msg.ReplyMarkup = torrentKbd(torr.HashString)
+	if msg.Text != "" {
+		if _, err := ctx.Bot.Send(msg); err != nil {
+			log.Panic(err)
+		}
+	}
+}
+
+func sendTorrentList(id int64, sf showFilter) {
+	torrents, err := ctx.TrApi.GetTorrents()
+	if err != nil {
+		log.Panic(err)
+	}
+	for _, i := range torrents {
+		switch sf {
+		case All:
+			sendTorrent(id, i)
+		case Active:
+			if i.Status != 0 && i.ErrorString == "" {
+				sendTorrent(id, i)
+			}
+		case NotActive:
+			if i.Status == 0 {
+				sendTorrent(id, i)
+			}
+		}
+	}
 }

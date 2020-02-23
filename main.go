@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"sync"
 
@@ -27,9 +26,6 @@ func init() {
 func main() {
 	flag.Parse()
 	cfg := marshalConf(path)
-
-	fmt.Println(cfg)
-
 	ctx.Debug = cfg.Debug
 	b, err := tgbotapi.NewBotAPI(cfg.Token)
 	if err != nil {

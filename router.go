@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-	glh "github.com/0x0BSoD/goLittleHelpers"
 	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
 	"log"
 )
@@ -31,12 +29,23 @@ func parseUpdate(upd tgbotapi.Update) {
 		msg.ParseMode = "MarkdownV2"
 
 		if !upd.Message.IsCommand() {
-			fmt.Println("Sample message type:")
-			_ = glh.PrettyPrint(upd)
-			msg.Text = "ok"
+			switch upd.Message.Text {
+			case "All torrents":
+				sendTorrentList(upd.Message.Chat.ID, All)
+			case "Active torrents":
+				sendTorrentList(upd.Message.Chat.ID, Active)
+			case "Not Active torrents":
+				sendTorrentList(upd.Message.Chat.ID, NotActive)
+			default:
+				msg := tgbotapi.NewVideoUpload(upd.Message.Chat.ID, "error.mp4")
+				if _, err := ctx.Bot.Send(msg); err != nil {
+					log.Panic(err)
+				}
+				return
+			}
 		} else {
 			switch upd.Message.Command() {
-			case "help":
+			case "help", "start":
 				msg.Text = "Telegram Bot as interface for transmission"
 				msg.ReplyMarkup = mainKbd
 			case "status":
@@ -50,7 +59,9 @@ func parseUpdate(upd tgbotapi.Update) {
 		}
 	}
 
-	if _, err := ctx.Bot.Send(msg); err != nil {
-		log.Panic(err)
+	if msg.Text != "" {
+		if _, err := ctx.Bot.Send(msg); err != nil {
+			log.Panic(err)
+		}
 	}
 }
