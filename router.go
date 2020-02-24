@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
 	"log"
+	"strings"
 )
 
 func parseUpdate(upd tgbotapi.Update) {
@@ -13,15 +15,31 @@ func parseUpdate(upd tgbotapi.Update) {
 		if upd.CallbackQuery.Data != "" {
 			msg = tgbotapi.NewMessage(upd.CallbackQuery.Message.Chat.ID, "")
 			msg.ParseMode = "MarkdownV2"
-			switch upd.CallbackQuery.Data {
-			case "cfg_json":
-				msg.Text = sendJsonConfig()
-			default:
-				msg := tgbotapi.NewVideoUpload(upd.CallbackQuery.Message.Chat.ID, "error.mp4")
-				if _, err := ctx.Bot.Send(msg); err != nil {
-					log.Panic(err)
+			if strings.Contains(upd.CallbackQuery.Data, "_") {
+				request := strings.Split(upd.CallbackQuery.Data, "_")
+				switch request[0] {
+				case "open":
+					msg.Text = sendTorrentDetails(request[1])
+				case "delete":
+					fmt.Println("delete ", request[1])
+				default:
+					msg := tgbotapi.NewVideoUpload(upd.CallbackQuery.Message.Chat.ID, "error.mp4")
+					if _, err := ctx.Bot.Send(msg); err != nil {
+						log.Panic(err)
+					}
+					return
 				}
-				return
+			} else {
+				switch upd.CallbackQuery.Data {
+				case "json":
+					msg.Text = sendJsonConfig()
+				default:
+					msg := tgbotapi.NewVideoUpload(upd.CallbackQuery.Message.Chat.ID, "error.mp4")
+					if _, err := ctx.Bot.Send(msg); err != nil {
+						log.Panic(err)
+					}
+					return
+				}
 			}
 		}
 	} else {

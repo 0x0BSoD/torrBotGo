@@ -1,0 +1,9 @@
+`{{ .Icon }} | {{ .Name }}`
+{{ .Status }}
+Size: `{{ .Size }}`
+{{ if .Error }}
+`{{ .ErrorString }}`
+{{end -}}
+{{ if .Active }}
+`⬇️ Downloading: {{ .Dspeed }} | ⬆️ Uploading: {{ .Uspeed }}`
+{{end -}}

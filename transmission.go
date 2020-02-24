@@ -103,12 +103,17 @@ func sendJsonConfig() string {
 }
 
 type Torrent struct {
+	Active      bool
 	Name        string
 	Status      string
 	Icon        string
+	Error       bool
 	ErrorString string
+	Size        string
 	Comment     string
 	Hash        string
+	Dspeed      string
+	Uspeed      string
 }
 
 func parseStatus(s int) (string, string) {
@@ -160,12 +165,13 @@ func sendTorrent(id int64, torr *transmission.Torrent) {
 	icon, status := parseStatus(torr.Status)
 
 	t.Execute(&dRes, Torrent{
-		torr.Name,
-		status,
-		icon,
-		torr.ErrorString,
-		torr.Comment,
-		torr.HashString})
+		Name:        torr.Name,
+		Status:      status,
+		Icon:        icon,
+		ErrorString: torr.ErrorString,
+		Comment:     torr.Comment,
+		Hash:        torr.HashString,
+	})
 
 	msg := tgbotapi.NewMessage(id, dRes.String())
 	msg.ParseMode = "MarkdownV2"
@@ -196,4 +202,45 @@ func sendTorrentList(id int64, sf showFilter) {
 			}
 		}
 	}
+}
+
+func sendTorrentDetails(hash string) string {
+	tMap, err := ctx.TrApi.GetTorrentMap()
+	if err != nil {
+		log.Panic(err)
+	}
+
+	var active bool
+	var error bool
+	if tMap[hash].Status != 0 {
+		active = true
+	}
+	if tMap[hash].ErrorString != "" {
+		error = true
+	}
+	icon, status := parseStatus(tMap[hash].Status)
+
+	t, err := template.ParseFiles("templates/torrent.gotmpl")
+	if err != nil {
+		log.Panic(err)
+	}
+
+	if error {
+		icon = "🔥️"
+	}
+
+	var dRes bytes.Buffer
+	t.Execute(&dRes, Torrent{
+		Active:      active,
+		Error:       error,
+		Name:        tMap[hash].Name,
+		Status:      status,
+		Icon:        icon,
+		ErrorString: tMap[hash].ErrorString,
+		Size:        glh.ConvertBytes(float64(tMap[hash].TotalSize), glh.Size),
+		Dspeed:      glh.ConvertBytes(float64(tMap[hash].RateDownload), glh.Speed),
+		Uspeed:      glh.ConvertBytes(float64(tMap[hash].RateUpload), glh.Speed),
+	})
+
+	return dRes.String()
 }

@@ -13,7 +13,7 @@ func torrentKbd(hash string) tgbotapi.InlineKeyboardMarkup {
 
 var configKbd = tgbotapi.NewInlineKeyboardMarkup(
 	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData("Show full config as JSON", "cfg_json"),
+		tgbotapi.NewInlineKeyboardButtonData("Show full config as JSON", "json"),
 	),
 )
 
