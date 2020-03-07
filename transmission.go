@@ -306,6 +306,7 @@ func stopTorrent(hash string, cID int64, mID int) error {
 	if err != nil {
 		return err
 	}
+	TORRENT = nil
 
 	msgTxt := getTorrentDetails(hash)
 	newMarkup := torrentDetailKbd(hash, TORRENT.Status)
@@ -322,6 +323,7 @@ func startTorrent(hash string, cID int64, mID int) error {
 	if err != nil {
 		return err
 	}
+	TORRENT = nil
 
 	msgTxt := getTorrentDetails(hash)
 	newMarkup := torrentDetailKbd(hash, TORRENT.Status)
