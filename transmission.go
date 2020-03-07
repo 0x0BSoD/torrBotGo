@@ -3,11 +3,13 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	glh "github.com/0x0BSoD/goLittleHelpers"
 	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
 	"github.com/0x0BSoD/transmission"
 	"log"
 	"sort"
+	"strings"
 	"text/template"
 )
 
@@ -163,7 +165,7 @@ func sendTorrent(id int64, torr *transmission.Torrent) error {
 	return nil
 }
 
-func sendTorrentList(id int64, sf showFilter) error {
+func sendTorrentList(chatID int64, sf showFilter) error {
 	torrents, err := ctx.TrApi.GetTorrents()
 	if err != nil {
 		return err
@@ -176,27 +178,26 @@ func sendTorrentList(id int64, sf showFilter) error {
 	for _, i := range torrents {
 		switch sf {
 		case All:
-			err := sendTorrent(id, i)
+			err := sendTorrent(chatID, i)
 			if err != nil {
 				return err
 			}
 		case Active:
 			if i.Status != 0 && i.ErrorString == "" {
-				err := sendTorrent(id, i)
+				err := sendTorrent(chatID, i)
 				if err != nil {
 					return err
 				}
 			}
 		case NotActive:
 			if i.Status == 0 {
-				err := sendTorrent(id, i)
+				err := sendTorrent(chatID, i)
 				if err != nil {
 					return err
 				}
 			}
 		}
 	}
-
 	return nil
 }
 
@@ -260,7 +261,7 @@ func sendTorrentDetails(hash string, chatID int64, messageID int) error {
 	return nil
 }
 
-func sendTorrentFiles(hash string, ID int64) {
+func sendTorrentFiles(hash string, chatID int64) {
 	tMap, err := ctx.TrApi.GetTorrentMap()
 	if err != nil {
 		log.Panic(err)
@@ -271,7 +272,7 @@ func sendTorrentFiles(hash string, ID int64) {
 
 	for i := 0; i < len(files); i++ {
 
-		msg := tgbotapi.NewMessage(ID, "")
+		msg := tgbotapi.NewMessage(chatID, "")
 		msg.ParseMode = "MarkdownV2"
 
 		t, err := template.ParseFiles("templates/torrentFile.gotmpl")
@@ -301,7 +302,11 @@ func sendTorrentFiles(hash string, ID int64) {
 // ACTIONS WITH TORRENT
 //======================================================================================================================
 
-func stopTorrent(hash string, cID int64, mID int) error {
+func stopTorrent(hash string, chatID int64, messageID int) error {
+	if TORRENT == nil {
+		_ = getTorrentDetails(hash)
+	}
+
 	err := TORRENT.Stop()
 	if err != nil {
 		return err
@@ -310,7 +315,7 @@ func stopTorrent(hash string, cID int64, mID int) error {
 
 	msgTxt := getTorrentDetails(hash)
 	newMarkup := torrentDetailKbd(hash, TORRENT.Status)
-	err = sendEditedMessage(cID, mID, msgTxt, &newMarkup)
+	err = sendEditedMessage(chatID, messageID, msgTxt, &newMarkup)
 	if err != nil {
 		return err
 	}
@@ -318,7 +323,11 @@ func stopTorrent(hash string, cID int64, mID int) error {
 	return nil
 }
 
-func startTorrent(hash string, cID int64, mID int) error {
+func startTorrent(hash string, chatID int64, messageID int) error {
+	if TORRENT == nil {
+		_ = getTorrentDetails(hash)
+	}
+
 	err := TORRENT.Start()
 	if err != nil {
 		return err
@@ -327,7 +336,7 @@ func startTorrent(hash string, cID int64, mID int) error {
 
 	msgTxt := getTorrentDetails(hash)
 	newMarkup := torrentDetailKbd(hash, TORRENT.Status)
-	err = sendEditedMessage(cID, mID, msgTxt, &newMarkup)
+	err = sendEditedMessage(chatID, messageID, msgTxt, &newMarkup)
 	if err != nil {
 		return err
 	}
@@ -335,7 +344,46 @@ func startTorrent(hash string, cID int64, mID int) error {
 	return nil
 }
 
-// TODO: Add this in API
-func removeTorrent() string {
-	return "not implemented"
+func removeTorrentQuestion(hash string, chatID int64, messageID int) error {
+	msgTxt := getTorrentDetails(hash)
+	replyMarkup := torrentDeleteKbd(hash)
+	err := sendEditedMessage(chatID, messageID, msgTxt, &replyMarkup)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func removeTorrent(hash string, chatID int64, messageID int, what string) error {
+	whatS := strings.Split(what, "-")[1]
+	switch whatS {
+	case "yes":
+		err := ctx.TrApi.RemoveTorrents([]*transmission.Torrent{TORRENT}, false)
+		if err != nil {
+			return err
+		}
+	case "yes+data":
+		err := ctx.TrApi.RemoveTorrents([]*transmission.Torrent{TORRENT}, true)
+		if err != nil {
+			return err
+		}
+	case "no":
+		msgTxt := getTorrentDetails(hash)
+		replyMarkup := torrentDetailKbd(hash, TORRENT.Status)
+		err := sendEditedMessage(chatID, messageID, msgTxt, &replyMarkup)
+		if err != nil {
+			return err
+		}
+		return nil
+	default:
+		return fmt.Errorf("nope, failed")
+	}
+
+	err := sendEditedMessage(chatID, messageID, "removed", nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

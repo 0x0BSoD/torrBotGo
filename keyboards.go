@@ -10,6 +10,16 @@ func torrentKbd(hash string, status int) tgbotapi.InlineKeyboardMarkup {
 	)
 }
 
+func torrentDeleteKbd(hash string) tgbotapi.InlineKeyboardMarkup {
+	return tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("Yes", "delete-yes_"+hash),
+			tgbotapi.NewInlineKeyboardButtonData("Yes(with data)", "delete-yes+data"+hash),
+			tgbotapi.NewInlineKeyboardButtonData("Cancel", "delete-no_"+hash),
+		),
+	)
+}
+
 func torrentDetailKbd(hash string, status int) tgbotapi.InlineKeyboardMarkup {
 	if status == 0 {
 		return tgbotapi.NewInlineKeyboardMarkup(

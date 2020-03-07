@@ -10,29 +10,35 @@ func handleInline(upd tgbotapi.Update) {
 	if upd.CallbackQuery.Data == "" {
 		return
 	}
-	ID := upd.CallbackQuery.Message.Chat.ID
+	chatID := upd.CallbackQuery.Message.Chat.ID
+	messageID := upd.CallbackQuery.Message.MessageID
 	var err error
 	if strings.Contains(upd.CallbackQuery.Data, "_") {
 		request := strings.Split(upd.CallbackQuery.Data, "_")
 		switch request[0] {
 		case "open":
-			err = sendTorrentDetails(request[1], ID, upd.CallbackQuery.Message.MessageID)
-		//case "delete":
-		//	fmt.Println("delete ", request[1])
-		//	msg.Text = removeTorrent()
+			err = sendTorrentDetails(request[1], chatID, messageID)
+		case "delete":
+			err = removeTorrentQuestion(request[1], chatID, messageID)
+		case "delete-yes":
+			err = removeTorrent(request[1], chatID, messageID, request[0])
+		case "delete-yes+data":
+			err = removeTorrent(request[1], chatID, messageID, request[0])
+		case "delete-no":
+			err = removeTorrent(request[1], chatID, messageID, request[0])
 		case "files":
-			sendTorrentFiles(request[1], ID)
+			sendTorrentFiles(request[1], chatID)
 			return
 		case "stop":
-			err = stopTorrent(request[1], ID, upd.CallbackQuery.Message.MessageID)
+			err = stopTorrent(request[1], chatID, messageID)
 		case "start":
-			err = startTorrent(request[1], ID, upd.CallbackQuery.Message.MessageID)
+			err = startTorrent(request[1], chatID, messageID)
 		case "pUp":
 			fmt.Println("pUp ", request[1])
 		case "pDown":
 			fmt.Println("pDown ", request[1])
 		default:
-			sendError(ID, "I don't know that command")
+			sendError(chatID, "I don't know that command")
 			return
 		}
 	}
@@ -47,6 +53,6 @@ func handleInline(upd tgbotapi.Update) {
 	//}
 
 	if err != nil {
-		sendError(ID, err.Error())
+		sendError(chatID, err.Error())
 	}
 }
