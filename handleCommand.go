@@ -9,24 +9,31 @@ func handleCommand(upd tgbotapi.Update) {
 	ID := upd.Message.Chat.ID
 	msg := tgbotapi.NewMessage(ID, "")
 	msg.ParseMode = "MarkdownV2"
-
+	var err error
+	var text string
 	switch upd.Message.Command() {
 	case "help", "start":
-		msg.Text = "Telegram Bot as interface for transmission"
+		text = "Telegram Bot as interface for transmission"
 		msg.ReplyMarkup = mainKbd
 	case "status":
-		msg.Text = sendStatus()
+		text, err = sendStatus()
 	case "config":
-		msg.Text = sendConfig()
+		text, err = sendConfig()
 		msg.ReplyMarkup = configKbd
 	default:
 		sendError(ID, "I don't know that command")
 		return
 	}
 
-	if msg.Text != "" {
-		if _, err := ctx.Bot.Send(msg); err != nil {
-			log.Panic(err)
+	msg.Text = text
+
+	if err != nil {
+		sendError(ID, err.Error())
+	} else {
+		if msg.Text != "" {
+			if _, err := ctx.Bot.Send(msg); err != nil {
+				log.Panic(err)
+			}
 		}
 	}
 }

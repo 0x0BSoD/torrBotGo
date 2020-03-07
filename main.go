@@ -25,13 +25,16 @@ func init() {
 
 func main() {
 	flag.Parse()
+
 	cfg := marshalConf(path)
 	ctx.Debug = cfg.Debug
 	b, err := tgbotapi.NewBotAPI(cfg.Token)
 	if err != nil {
 		log.Panic(err)
 	}
+	b.Debug = true
 	ctx.Bot = b
+
 	conf := transmission.Config{
 		Address:  cfg.Transmission.Uri,
 		User:     cfg.Transmission.User,
@@ -47,7 +50,11 @@ func main() {
 	u.Timeout = 60
 
 	updates, err := ctx.Bot.GetUpdatesChan(u)
+	if err != nil {
+		log.Panic(err)
+	}
 
+	log.Println("Bot started ...")
 	for update := range updates {
 		parseUpdate(update)
 	}
