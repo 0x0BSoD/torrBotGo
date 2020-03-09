@@ -108,6 +108,9 @@ func sendJsonConfig() string {
 }
 
 type Torrent struct {
+	ID             int
+	Peers          int
+	Downloading    bool
 	Active         bool
 	Name           string
 	Status         string
@@ -121,6 +124,7 @@ type Torrent struct {
 	PosInQ         int
 	Dspeed         string
 	Uspeed         string
+	Percents       string
 }
 
 type showFilter int
@@ -229,6 +233,10 @@ func getTorrentDetails(hash string) string {
 
 	var dRes bytes.Buffer
 	t.Execute(&dRes, Torrent{
+		ID:             TORRENT.ID,
+		Peers:          len(*TORRENT.Peers),
+		Downloading:    TORRENT.Status == 4,
+		PosInQ:         TORRENT.QueuePosition,
 		Active:         active,
 		Error:          _error,
 		Name:           TORRENT.Name,
@@ -239,6 +247,7 @@ func getTorrentDetails(hash string) string {
 		DownloadedSize: glh.ConvertBytes(float64(TORRENT.LeftUntilDone), glh.Size),
 		Dspeed:         glh.ConvertBytes(float64(TORRENT.RateDownload), glh.Speed),
 		Uspeed:         glh.ConvertBytes(float64(TORRENT.RateUpload), glh.Speed),
+		Percents:       fmt.Sprintf("%.2f%%", TORRENT.PercentDone),
 	})
 
 	return dRes.String()
@@ -385,5 +394,54 @@ func removeTorrent(hash string, chatID int64, messageID int, what string) error 
 		return err
 	}
 
+	return nil
+}
+
+func queueTorrentQuestion(hash string, chatID int64, messageID int) error {
+	msgTxt := getTorrentDetails(hash)
+	replyMarkup := torrentQueueKbd(hash)
+	err := sendEditedMessage(chatID, messageID, msgTxt, &replyMarkup)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func queueTorrent(hash string, chatID int64, messageID int, what string) error {
+	whatS := strings.Split(what, "-")[1]
+	switch whatS {
+	case "top":
+		err := ctx.TrApi.QueueMoveTop([]*transmission.Torrent{TORRENT})
+		if err != nil {
+			return err
+		}
+	case "up":
+		err := ctx.TrApi.QueueMoveUp([]*transmission.Torrent{TORRENT})
+		if err != nil {
+			return err
+		}
+	case "down":
+		err := ctx.TrApi.QueueMoveDown([]*transmission.Torrent{TORRENT})
+		if err != nil {
+			return err
+		}
+	case "bottom":
+		err := ctx.TrApi.QueueMoveBottom([]*transmission.Torrent{TORRENT})
+		if err != nil {
+			return err
+		}
+	case "no":
+		// pass
+	default:
+		return fmt.Errorf("nope, failed")
+	}
+
+	msgTxt := getTorrentDetails(hash)
+	replyMarkup := torrentDetailKbd(hash, TORRENT.Status)
+	err := sendEditedMessage(chatID, messageID, msgTxt, &replyMarkup)
+	if err != nil {
+		return err
+	}
 	return nil
 }

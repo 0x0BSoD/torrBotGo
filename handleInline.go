@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
 	"strings"
 )
@@ -33,10 +32,18 @@ func handleInline(upd tgbotapi.Update) {
 			err = stopTorrent(request[1], chatID, messageID)
 		case "start":
 			err = startTorrent(request[1], chatID, messageID)
-		case "pUp":
-			fmt.Println("pUp ", request[1])
-		case "pDown":
-			fmt.Println("pDown ", request[1])
+		case "priority":
+			err = queueTorrentQuestion(request[1], chatID, messageID)
+		case "prior-top":
+			err = queueTorrent(request[1], chatID, messageID, request[0])
+		case "prior-up":
+			err = queueTorrent(request[1], chatID, messageID, request[0])
+		case "prior-down":
+			err = queueTorrent(request[1], chatID, messageID, request[0])
+		case "prior-bottom":
+			err = queueTorrent(request[1], chatID, messageID, request[0])
+		case "prior-no":
+			err = queueTorrent(request[1], chatID, messageID, request[0])
 		default:
 			sendError(chatID, "I don't know that command")
 			return
