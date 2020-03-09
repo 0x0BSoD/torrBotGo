@@ -10,10 +10,11 @@ import (
 )
 
 type GlobalContext struct {
-	Bot   *tgbotapi.BotAPI
-	TrApi *transmission.Client
-	Mutex sync.Mutex
-	Debug bool
+	Bot        *tgbotapi.BotAPI
+	TrApi      *transmission.Client
+	Mutex      sync.Mutex
+	Debug      bool
+	Categories map[string]string
 }
 
 var path string
@@ -34,6 +35,7 @@ func main() {
 	}
 	b.Debug = true
 	ctx.Bot = b
+	ctx.Categories = cfg.Categories
 
 	conf := transmission.Config{
 		Address:  cfg.Transmission.Uri,
@@ -44,6 +46,19 @@ func main() {
 	if err != nil {
 		log.Panic(err)
 	}
+
+	err = t.Session.Update()
+	if err != nil {
+		log.Panic(err)
+	}
+
+	if cfg.DefaultDownloadDir != "" {
+		err := t.Session.Set(transmission.SetSessionArgs{DownloadDir: cfg.DefaultDownloadDir})
+		if err != nil {
+			log.Panic(err)
+		}
+	}
+
 	ctx.TrApi = t
 
 	u := tgbotapi.NewUpdate(0)

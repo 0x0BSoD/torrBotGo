@@ -12,6 +12,11 @@ func handleInline(upd tgbotapi.Update) {
 	chatID := upd.CallbackQuery.Message.Chat.ID
 	messageID := upd.CallbackQuery.Message.MessageID
 	var err error
+
+	if strings.HasPrefix(upd.CallbackQuery.Data, "add-") {
+		err = addTorrentMagnet(chatID, upd.CallbackQuery.Data)
+	}
+
 	if strings.Contains(upd.CallbackQuery.Data, "_") {
 		request := strings.Split(upd.CallbackQuery.Data, "_")
 		switch request[0] {
@@ -26,8 +31,7 @@ func handleInline(upd tgbotapi.Update) {
 		case "delete-no":
 			err = removeTorrent(request[1], chatID, messageID, request[0])
 		case "files":
-			sendTorrentFiles(request[1], chatID)
-			return
+			err = sendTorrentFiles(request[1], chatID)
 		case "stop":
 			err = stopTorrent(request[1], chatID, messageID)
 		case "start":

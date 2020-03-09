@@ -1,12 +1,12 @@
 `{{ .Icon }} | {{ .Name }} | ID: {{ .ID }}`
-Place in queue: {{ .PosInQ }}
-{{ .Status }}
+Place in queue: `{{ .PosInQ }}`
+`{{ .Status }}`
 Size: `{{ .Size }}`
 {{ if .Error }}
 `{{ .ErrorString }}`
 {{end -}}
 {{ if .Active }}
-Peers: {{ .Peers }}
-{{ if .Downloading }} Percent done: {{ .Percents }} {{ end }}
+Peers: `{{ .Peers }}`
+{{ if .Downloading }} Percent done: `{{ .Percents }}` {{ end }}
 `⬇️ Downloading: {{ .Dspeed }} | ⬆️ Uploading: {{ .Uspeed }}`
 {{end -}}

@@ -2,7 +2,27 @@ package main
 
 import tgbotapi "github.com/0x0BSoD/telegram-bot-api"
 
-func torrentKbd(hash string, status int) tgbotapi.InlineKeyboardMarkup {
+func torrentAddKbd() tgbotapi.InlineKeyboardMarkup {
+	var rows [][]tgbotapi.InlineKeyboardButton
+	var btns []tgbotapi.InlineKeyboardButton
+	count := 0
+
+	for name, path := range ctx.Categories {
+		if count == 3 {
+			rows = append(rows, tgbotapi.NewInlineKeyboardRow(btns...))
+			btns = []tgbotapi.InlineKeyboardButton{}
+			count = 0
+		}
+		btns = append(btns, tgbotapi.NewInlineKeyboardButtonData(name, "add-"+path))
+		count++
+	}
+	rows = append(rows, tgbotapi.NewInlineKeyboardRow(btns...))
+	rows = append(rows, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("Cancel", "add-no")))
+
+	return tgbotapi.NewInlineKeyboardMarkup(rows...)
+}
+
+func torrentKbd(hash string) tgbotapi.InlineKeyboardMarkup {
 	return tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("Details", "open_"+hash),

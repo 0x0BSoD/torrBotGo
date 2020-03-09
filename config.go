@@ -8,9 +8,11 @@ import (
 )
 
 type config struct {
-	Token        string   `json:"token"`
-	Debug        bool     `json:"debug"`
-	Transmission trConfig `json:"transmission"`
+	Token              string            `json:"token"`
+	Debug              bool              `json:"debug"`
+	Transmission       trConfig          `json:"transmission"`
+	DefaultDownloadDir string            `json:"default_download_dir"`
+	Categories         map[string]string `json:"categories"`
 }
 
 type trConfig struct {
