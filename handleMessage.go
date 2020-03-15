@@ -9,7 +9,9 @@ func handleMessage(upd tgbotapi.Update) {
 	ID := upd.Message.Chat.ID
 	var err error
 
-	if strings.HasPrefix(upd.Message.Text, "magnet:") {
+	if upd.Message.Document != nil {
+		err = addTorrentFileQuestion(ID, upd.Message.Document.FileID)
+	} else if strings.HasPrefix(upd.Message.Text, "magnet:") {
 		err = addTorrentMagnetQuestion(ID, upd.Message.Text)
 	} else {
 		switch upd.Message.Text {
@@ -20,7 +22,7 @@ func handleMessage(upd tgbotapi.Update) {
 		case "Not Active torrents":
 			err = sendTorrentList(ID, NotActive)
 		default:
-			sendError(ID, "I don't know that command")
+			sendError(ID, "I don't know that command. handleMessage")
 		}
 	}
 

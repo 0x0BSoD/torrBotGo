@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	glh "github.com/0x0BSoD/goLittleHelpers"
 	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
 	"strings"
 )
@@ -13,6 +15,10 @@ func handleInline(upd tgbotapi.Update) {
 	messageID := upd.CallbackQuery.Message.MessageID
 	var err error
 
+	if strings.HasPrefix(upd.CallbackQuery.Data, "file+add-") {
+		err = addTorrentFile(chatID, upd.CallbackQuery.Data)
+	}
+
 	if strings.HasPrefix(upd.CallbackQuery.Data, "add-") {
 		err = addTorrentMagnet(chatID, upd.CallbackQuery.Data)
 	}
@@ -20,8 +26,11 @@ func handleInline(upd tgbotapi.Update) {
 	if strings.Contains(upd.CallbackQuery.Data, "_") {
 		request := strings.Split(upd.CallbackQuery.Data, "_")
 		switch request[0] {
-		case "open":
-			err = sendTorrentDetails(request[1], chatID, messageID)
+		case "open", "update":
+			fmt.Println("====")
+			fmt.Println(upd.CallbackQuery.Message.Text)
+			fmt.Println("====")
+			err = sendTorrentDetails(request[1], chatID, messageID, glh.GetMD5Hash(upd.CallbackQuery.Message.Text))
 		case "delete":
 			err = removeTorrentQuestion(request[1], chatID, messageID)
 		case "delete-yes":
@@ -49,7 +58,7 @@ func handleInline(upd tgbotapi.Update) {
 		case "prior-no":
 			err = queueTorrent(request[1], chatID, messageID, request[0])
 		default:
-			sendError(chatID, "I don't know that command")
+			sendError(chatID, "I don't know that command, handleInline")
 			return
 		}
 	}

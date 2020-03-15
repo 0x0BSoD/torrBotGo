@@ -2,12 +2,16 @@ package main
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	glh "github.com/0x0BSoD/goLittleHelpers"
 	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
 	"github.com/0x0BSoD/transmission"
+	"github.com/jackpal/bencode-go"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"net/url"
 	"sort"
 	"strings"
@@ -16,6 +20,7 @@ import (
 
 var TORRENT *transmission.Torrent
 var MAGENT string
+var TFILE []byte
 
 // ========================
 // STATUS
@@ -278,8 +283,17 @@ type filesList struct {
 	Downloading bool
 }
 
-func sendTorrentDetails(hash string, chatID int64, messageID int) error {
+func sendTorrentDetails(hash string, chatID int64, messageID int, md5SumOld string) error {
 	t, err := getTorrentDetails(hash)
+
+	fmt.Println("====")
+	fmt.Println(strings.ReplaceAll(t, "`", ""))
+	fmt.Println("====")
+
+	if glh.GetMD5Hash(strings.ReplaceAll(t, "`", "")) == md5SumOld {
+		return nil
+	}
+
 	if err != nil {
 		return err
 	}
@@ -355,7 +369,7 @@ func addTorrentMagnetQuestion(chatID int64, text string) error {
 
 	message := fmt.Sprintf("❔ To add:```%s```\nTrackers:```%s```", name, strings.Join(trackers, "\n"))
 
-	kbd := torrentAddKbd()
+	kbd := torrentAddKbd(false)
 	err := sendNewMessage(chatID, message, &kbd)
 	if err != nil {
 		return err
@@ -386,9 +400,9 @@ func addTorrentMagnet(chatID int64, operation string) error {
 		return err
 	}
 
-	jsonStr, _ := json.MarshalIndent(res, "", "  ")
+	msg := fmt.Sprintf("`%s` - Sucesefully added", res.Name)
 
-	err = sendNewMessage(chatID, "```"+string(jsonStr)+"```", nil)
+	err = sendNewMessage(chatID, msg, nil)
 	if err != nil {
 		return err
 	}
@@ -554,5 +568,115 @@ func queueTorrent(hash string, chatID int64, messageID int, what string) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+type bencodeInfo struct {
+	Length int    `bencode:"length"`
+	Name   string `bencode:"name"`
+}
+
+type bencodeTorrent struct {
+	Comment  string      `bencode:"comment"`
+	Announce string      `bencode:"announce"`
+	Info     bencodeInfo `bencode:"info"`
+}
+
+func addTorrentFileQuestion(chatID int64, fileID string) error {
+	_url, err := ctx.Bot.GetFileDirectURL(fileID)
+	if err != nil {
+		return err
+	}
+
+	resp, err := http.Get(_url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	TFILE, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	bto := bencodeTorrent{}
+	err = bencode.Unmarshal(bytes.NewReader(TFILE), &bto)
+	if err != nil {
+		return err
+	}
+
+	if ctx.Debug {
+		_ = glh.PrettyPrint(bto)
+	}
+
+	freeSpaceData, err := ctx.TrApi.FreeSpace(ctx.TrApi.Session.DownloadDir)
+	kbdAdd := torrentAddKbd(true)
+
+	// torrent from rutracker
+	if bto.Comment != "" {
+		imgUrl, err := getImgFromTracker(bto.Comment)
+		if err != nil {
+			return err
+		}
+
+		_, err = url.ParseRequestURI(imgUrl)
+		if err != nil {
+			return err
+		}
+
+		client := httpClient()
+
+		resp, err := client.Get(imgUrl)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+
+		err = sendNewImagedMessage(chatID, bto.Info.Name, resp.Body, &kbdAdd)
+		if err != nil {
+			return err
+		}
+
+	} else {
+		err = sendNewMessage(chatID, "```"+"Free space: "+glh.ConvertBytes(float64(freeSpaceData), glh.Size)+"```", nil)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func addTorrentFile(chatID int64, operation string) error {
+
+	if operation == "file+add-no" {
+		TFILE = nil
+		err := sendNewMessage(chatID, "Okay", nil)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	path := ctx.TrApi.Session.DownloadDir + strings.Split(operation, "-")[1]
+
+	base64Str := base64.StdEncoding.EncodeToString(TFILE)
+
+	res, err := ctx.TrApi.AddTorrent(transmission.AddTorrentArg{
+		DownloadDir: path,
+		Metainfo:    base64Str,
+		Paused:      false,
+	})
+	if err != nil {
+		return err
+	}
+
+	msg := fmt.Sprintf("`%s` - Sucesefully added", res.Name)
+
+	err = sendNewMessage(chatID, msg, nil)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

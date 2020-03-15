@@ -21,7 +21,7 @@ func handleCommand(upd tgbotapi.Update) {
 		text, err = sendConfig()
 		msg.ReplyMarkup = configKbd
 	default:
-		sendError(ID, "I don't know that command")
+		sendError(ID, "I don't know that command. handleCommand")
 		return
 	}
 

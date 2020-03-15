@@ -2,10 +2,14 @@ package main
 
 import tgbotapi "github.com/0x0BSoD/telegram-bot-api"
 
-func torrentAddKbd() tgbotapi.InlineKeyboardMarkup {
+func torrentAddKbd(byFile bool) tgbotapi.InlineKeyboardMarkup {
 	var rows [][]tgbotapi.InlineKeyboardButton
 	var btns []tgbotapi.InlineKeyboardButton
 	count := 0
+	prefix := ""
+	if byFile {
+		prefix = "file+"
+	}
 
 	for name, path := range ctx.Categories {
 		if count == 3 {
@@ -13,11 +17,11 @@ func torrentAddKbd() tgbotapi.InlineKeyboardMarkup {
 			btns = []tgbotapi.InlineKeyboardButton{}
 			count = 0
 		}
-		btns = append(btns, tgbotapi.NewInlineKeyboardButtonData(name, "add-"+path))
+		btns = append(btns, tgbotapi.NewInlineKeyboardButtonData(name, prefix+"add-"+path))
 		count++
 	}
 	rows = append(rows, tgbotapi.NewInlineKeyboardRow(btns...))
-	rows = append(rows, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("Cancel", "add-no")))
+	rows = append(rows, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("Cancel", prefix+"add-no")))
 
 	return tgbotapi.NewInlineKeyboardMarkup(rows...)
 }
@@ -62,6 +66,7 @@ func torrentDetailKbd(hash string, status int) tgbotapi.InlineKeyboardMarkup {
 				tgbotapi.NewInlineKeyboardButtonData("Files", "files_"+hash),
 				tgbotapi.NewInlineKeyboardButtonData("Start", "start_"+hash),
 				tgbotapi.NewInlineKeyboardButtonData("Delete", "delete_"+hash),
+				tgbotapi.NewInlineKeyboardButtonData("🔁", "update_"+hash),
 			),
 		)
 	} else {
@@ -71,6 +76,7 @@ func torrentDetailKbd(hash string, status int) tgbotapi.InlineKeyboardMarkup {
 				tgbotapi.NewInlineKeyboardButtonData("Files", "files_"+hash),
 				tgbotapi.NewInlineKeyboardButtonData("Stop", "stop_"+hash),
 				tgbotapi.NewInlineKeyboardButtonData("Delete", "delete_"+hash),
+				tgbotapi.NewInlineKeyboardButtonData("🔁", "update_"+hash),
 			),
 		)
 	}

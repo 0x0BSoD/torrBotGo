@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"sync"
 
@@ -42,15 +43,23 @@ func main() {
 		User:     cfg.Transmission.User,
 		Password: cfg.Transmission.Password,
 	}
+
+	fmt.Print("Connecting to transmission API ")
 	t, err := transmission.New(conf)
 	if err != nil {
+		fmt.Println("❌")
 		log.Panic(err)
 	}
+	fmt.Println("✔️")
+	defer t.Session.Close()
 
+	fmt.Print("Updating transmission session info ")
 	err = t.Session.Update()
 	if err != nil {
+		fmt.Println("❌")
 		log.Panic(err)
 	}
+	fmt.Println("✔️")
 
 	if cfg.DefaultDownloadDir != "" {
 		err := t.Session.Set(transmission.SetSessionArgs{DownloadDir: cfg.DefaultDownloadDir})
@@ -64,12 +73,15 @@ func main() {
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 
+	fmt.Print("Getting updates chain ")
 	updates, err := ctx.Bot.GetUpdatesChan(u)
 	if err != nil {
+		fmt.Println("❌")
 		log.Panic(err)
 	}
+	fmt.Println("✔️")
 
-	log.Println("Bot started ...")
+	fmt.Println("Bot started ✔️")
 	for update := range updates {
 		parseUpdate(update)
 	}
