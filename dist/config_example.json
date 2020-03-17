@@ -1,17 +1,3 @@
-# Transmission telegram bot
-
-Telegram bot as a transmission interface.
-
-#### Features
- * Add torrent by file / magnet link
- * Get short info about status
- * Start / Stop torrents
- * Change torrent priority
- * Remove torrent
- * Message when torrent done (TBD)
-
-Config:
-```json
 {
   "token":"TELEGRAM_TOKEN",
   "debug": false,
@@ -29,4 +15,3 @@ Config:
     "Education": "/Education"
   }
 }
-```
