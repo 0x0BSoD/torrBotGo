@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	glh "github.com/0x0BSoD/goLittleHelpers"
 	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
@@ -224,54 +225,50 @@ func sendTorrentList(chatID int64, sf showFilter) error {
 }
 
 func getTorrentDetails(hash string) (string, error) {
-	//if TORRENT == nil || TORRENT.HashString != hash {
-	//	tMap, err := ctx.TrApi.GetTorrentMap()
-	//	if err != nil {
-	//		log.Panic(err)
-	//	}
-	TORRENT = ctx.TorrentCache.Items[hash]
-	//}
+	if TORRENT, ok := ctx.TorrentCache.Items[hash]; ok {
+		var active bool
+		if TORRENT.Status != 0 {
+			active = true
+		}
 
-	var active bool
-	if TORRENT.Status != 0 {
-		active = true
+		icon, status := parseStatus(TORRENT.Status)
+		var _error bool
+		if TORRENT.ErrorString != "" {
+			_error = true
+			icon = "🔥️"
+		}
+
+		t, err := template.ParseFiles("templates/torrent.gotmpl")
+		if err != nil {
+			log.Panic(err)
+		}
+
+		var dRes bytes.Buffer
+		err = t.Execute(&dRes, Torrent{
+			ID:             TORRENT.ID,
+			Peers:          len(*TORRENT.Peers),
+			Downloading:    TORRENT.Status == 4,
+			PosInQ:         TORRENT.QueuePosition,
+			Active:         active,
+			Error:          _error,
+			Name:           TORRENT.Name,
+			Status:         status,
+			Icon:           icon,
+			ErrorString:    TORRENT.ErrorString,
+			Size:           glh.ConvertBytes(float64(TORRENT.TotalSize), glh.Size),
+			DownloadedSize: glh.ConvertBytes(float64(TORRENT.LeftUntilDone), glh.Size),
+			Dspeed:         glh.ConvertBytes(float64(TORRENT.RateDownload), glh.Speed),
+			Uspeed:         glh.ConvertBytes(float64(TORRENT.RateUpload), glh.Speed),
+			Percents:       fmt.Sprintf("%.2f%%", TORRENT.PercentDone*100.0),
+		})
+		if err != nil {
+			return "", err
+		}
+
+		return dRes.String(), nil
+	} else {
+		return "", errors.New("torrent not found")
 	}
-
-	icon, status := parseStatus(TORRENT.Status)
-	var _error bool
-	if TORRENT.ErrorString != "" {
-		_error = true
-		icon = "🔥️"
-	}
-
-	t, err := template.ParseFiles("templates/torrent.gotmpl")
-	if err != nil {
-		log.Panic(err)
-	}
-
-	var dRes bytes.Buffer
-	err = t.Execute(&dRes, Torrent{
-		ID:             TORRENT.ID,
-		Peers:          len(*TORRENT.Peers),
-		Downloading:    TORRENT.Status == 4,
-		PosInQ:         TORRENT.QueuePosition,
-		Active:         active,
-		Error:          _error,
-		Name:           TORRENT.Name,
-		Status:         status,
-		Icon:           icon,
-		ErrorString:    TORRENT.ErrorString,
-		Size:           glh.ConvertBytes(float64(TORRENT.TotalSize), glh.Size),
-		DownloadedSize: glh.ConvertBytes(float64(TORRENT.LeftUntilDone), glh.Size),
-		Dspeed:         glh.ConvertBytes(float64(TORRENT.RateDownload), glh.Speed),
-		Uspeed:         glh.ConvertBytes(float64(TORRENT.RateUpload), glh.Speed),
-		Percents:       fmt.Sprintf("%.2f%%", TORRENT.PercentDone*100.0),
-	})
-	if err != nil {
-		return "", err
-	}
-
-	return dRes.String(), nil
 }
 
 type filesList struct {
