@@ -225,7 +225,8 @@ func sendTorrentList(chatID int64, sf showFilter) error {
 }
 
 func getTorrentDetails(hash string) (string, error) {
-	if TORRENT, ok := ctx.TorrentCache.Items[hash]; ok {
+	var ok bool
+	if TORRENT, ok = ctx.TorrentCache.Items[hash]; ok {
 		var active bool
 		if TORRENT.Status != 0 {
 			active = true
