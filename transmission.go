@@ -13,7 +13,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"sort"
 	"strings"
 	"text/template"
 )
@@ -191,16 +190,14 @@ func sendTorrent(id int64, torr *transmission.Torrent) error {
 }
 
 func sendTorrentList(chatID int64, sf showFilter) error {
-	torrents, err := ctx.TrApi.GetTorrents()
-	if err != nil {
-		return err
-	}
+	// TODO: sort by priority
+	//sort.Slice(torrents[:], func(i, j int) bool {
+	//	return torrents[i].QueuePosition < torrents[i].QueuePosition
+	//})
 
-	sort.Slice(torrents[:], func(i, j int) bool {
-		return torrents[i].QueuePosition < torrents[i].QueuePosition
-	})
-
-	for _, i := range torrents {
+	ctx.Mutex.Lock()
+	defer ctx.Mutex.Unlock()
+	for _, i := range ctx.TorrentCache.Items {
 		switch sf {
 		case All:
 			err := sendTorrent(chatID, i)
@@ -227,13 +224,13 @@ func sendTorrentList(chatID int64, sf showFilter) error {
 }
 
 func getTorrentDetails(hash string) (string, error) {
-	if TORRENT == nil || TORRENT.HashString != hash {
-		tMap, err := ctx.TrApi.GetTorrentMap()
-		if err != nil {
-			log.Panic(err)
-		}
-		TORRENT = tMap[hash]
-	}
+	//if TORRENT == nil || TORRENT.HashString != hash {
+	//	tMap, err := ctx.TrApi.GetTorrentMap()
+	//	if err != nil {
+	//		log.Panic(err)
+	//	}
+	TORRENT = ctx.TorrentCache.Items[hash]
+	//}
 
 	var active bool
 	if TORRENT.Status != 0 {
@@ -284,6 +281,7 @@ type filesList struct {
 }
 
 func sendTorrentDetails(hash string, chatID int64, messageID int, md5SumOld string) error {
+	updateCache()
 	t, err := getTorrentDetails(hash)
 
 	fmt.Println("====")
@@ -306,14 +304,35 @@ func sendTorrentDetails(hash string, chatID int64, messageID int, md5SumOld stri
 	return nil
 }
 
-func sendTorrentFiles(hash string, chatID int64) error {
-	tMap, err := ctx.TrApi.GetTorrentMap()
+func sendTorrentDetailsByID(torrentID int64, chatID int64) error {
+	hash := ctx.TorrentCache.GetHash(int(torrentID))
+
+	t, err := getTorrentDetails(hash)
+
+	fmt.Println("====")
+	fmt.Println(strings.ReplaceAll(t, "`", ""))
+	fmt.Println("====")
+
+	if err != nil {
+		return err
+	}
+	replyMarkup := torrentDetailKbd(hash, TORRENT.Status)
+	err = sendNewMessage(chatID, t, &replyMarkup)
 	if err != nil {
 		return err
 	}
 
-	files := *tMap[hash].Files
-	filesStats := *tMap[hash].FileStats
+	return nil
+}
+
+func sendTorrentFiles(hash string, chatID int64) error {
+	//tMap, err := ctx.TrApi.GetTorrentMap()
+	//if err != nil {
+	//	return err
+	//}
+
+	files := *ctx.TorrentCache.Items[hash].Files
+	filesStats := *ctx.TorrentCache.Items[hash].FileStats
 
 	for i := 0; i < len(files); i++ {
 
@@ -407,6 +426,8 @@ func addTorrentMagnet(chatID int64, operation string) error {
 		return err
 	}
 
+	updateCache()
+
 	return nil
 }
 
@@ -430,6 +451,8 @@ func stopTorrent(hash string, chatID int64, messageID int) error {
 	if err != nil {
 		return err
 	}
+
+	updateCache()
 
 	return nil
 }
@@ -458,6 +481,8 @@ func startTorrent(hash string, chatID int64, messageID int) error {
 	if err != nil {
 		return err
 	}
+
+	updateCache()
 
 	return nil
 }
@@ -510,6 +535,8 @@ func removeTorrent(hash string, chatID int64, messageID int, what string) error 
 	if err != nil {
 		return err
 	}
+
+	updateCache()
 
 	return nil
 }
@@ -568,6 +595,9 @@ func queueTorrent(hash string, chatID int64, messageID int, what string) error {
 	if err != nil {
 		return err
 	}
+
+	updateCache()
+
 	return nil
 }
 
@@ -678,5 +708,33 @@ func addTorrentFile(chatID int64, operation string) error {
 		return err
 	}
 
+	updateCache()
+
 	return nil
+}
+
+func updateCache() {
+	tMap, err := ctx.TrApi.GetTorrentMap()
+	if err != nil {
+		panic(err)
+	}
+	changed := ctx.TorrentCache.Update(tMap)
+
+	if len(changed) == 0 {
+		return
+	}
+
+	for _, i := range changed {
+		if i.ErrorString != "" {
+			err := sendNewMessage(ctx.chatID, fmt.Sprintf("🔥️ Failed\n%s\nError:\n%s", i.Name, i.ErrorString), nil)
+			if err != nil {
+				panic(err)
+			}
+		} else if i.Status != 4 {
+			err := sendNewMessage(ctx.chatID, fmt.Sprintf("🎉 Downloaded\n%s", i.Name), nil)
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
 }

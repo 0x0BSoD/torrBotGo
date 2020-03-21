@@ -13,6 +13,7 @@ func handleCommand(upd tgbotapi.Update) {
 	var text string
 	switch upd.Message.Command() {
 	case "help", "start":
+		ctx.chatID = upd.Message.Chat.ID
 		text = "Telegram Bot as interface for transmission"
 		msg.ReplyMarkup = mainKbd
 	case "status":

@@ -160,6 +160,8 @@ func escapeAll(text string) string {
 		"_", "\\_",
 		"*", "\\*",
 		"[", "\\[",
-		"]", "\\]")
+		"]", "\\]",
+		"(", "\\(",
+		")", "\\)")
 	return re.Replace(text)
 }

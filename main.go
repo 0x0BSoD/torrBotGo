@@ -5,17 +5,20 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/0x0BSoD/telegram-bot-api"
 	"github.com/0x0BSoD/transmission"
 )
 
 type GlobalContext struct {
-	Bot        *tgbotapi.BotAPI
-	TrApi      *transmission.Client
-	Mutex      sync.Mutex
-	Debug      bool
-	Categories map[string]string
+	Bot          *tgbotapi.BotAPI
+	TrApi        *transmission.Client
+	Mutex        sync.Mutex
+	Debug        bool
+	Categories   map[string]string
+	TorrentCache Torrents
+	chatID       int64
 }
 
 var path string
@@ -51,7 +54,15 @@ func main() {
 		log.Panic(err)
 	}
 	fmt.Println("✔️")
-	defer t.Session.Close()
+	defer func() {
+		fmt.Print("Closing transmission session ")
+		err := t.Session.Close()
+		if err != nil {
+			fmt.Println("❌")
+			log.Panic(err)
+		}
+		fmt.Println("✔️")
+	}()
 
 	fmt.Print("Updating transmission session info ")
 	err = t.Session.Update()
@@ -68,12 +79,21 @@ func main() {
 		}
 	}
 
+	fmt.Print("Setting torrents cache ")
+	tMap, err := t.GetTorrentMap()
+	if err != nil {
+		fmt.Println("❌")
+		log.Panic(err)
+	}
+	ctx.TorrentCache = InitCache(tMap)
+	fmt.Println("✔️")
+
 	ctx.TrApi = t
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 
-	fmt.Print("Getting updates chain ")
+	fmt.Print("Getting updates channel ")
 	updates, err := ctx.Bot.GetUpdatesChan(u)
 	if err != nil {
 		fmt.Println("❌")
@@ -82,6 +102,14 @@ func main() {
 	fmt.Println("✔️")
 
 	fmt.Println("Bot started ✔️")
+
+	go func() {
+		for {
+			updateCache()
+			time.Sleep(1 * time.Minute)
+		}
+	}()
+
 	for update := range updates {
 		parseUpdate(update)
 	}
