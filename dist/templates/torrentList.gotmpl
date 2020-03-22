@@ -1,6 +1,6 @@
-[{{ .PosInQ }}] {{ .Icon }} {{ .Status }}
-`{{ .Name }}`
+`{{ .Icon }} | {{ .Status }} | ID: {{ .ID }}`
+{{ .Name }}
 {{ if .ErrorString -}}
 `----`
-`{{ .ErrorString }}`
+{{ .ErrorString }}
 {{ end }}

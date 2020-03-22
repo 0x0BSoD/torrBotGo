@@ -108,10 +108,10 @@ func sendConfig() (string, error) {
 	return dRes.String(), nil
 }
 
-func sendJsonConfig() (string, error) {
+func sendJsonConfig() error {
 	err := ctx.TrApi.Session.Update()
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	sc := ctx.TrApi.Session
@@ -122,10 +122,15 @@ func sendJsonConfig() (string, error) {
 
 	b, err := json.MarshalIndent(sc, "", "  ")
 	if err != nil {
-		log.Panic(err)
+		return err
 	}
 
-	return "```" + string(b) + "```", nil
+	err = sendNewMessage(ctx.chatID, fmt.Sprintf("`%s`", string(b)), nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type Torrent struct {
@@ -169,6 +174,7 @@ func sendTorrent(id int64, torr *transmission.Torrent) error {
 	icon, status := parseStatus(torr.Status)
 	var dRes bytes.Buffer
 	err = t.Execute(&dRes, Torrent{
+		ID:          torr.ID,
 		Name:        torr.Name,
 		Status:      status,
 		Icon:        icon,
@@ -190,7 +196,7 @@ func sendTorrent(id int64, torr *transmission.Torrent) error {
 	return nil
 }
 
-func sendTorrentList(chatID int64, sf showFilter) error {
+func sendTorrentList(sf showFilter) error {
 	// TODO: sort by priority
 	//sort.Slice(torrents[:], func(i, j int) bool {
 	//	return torrents[i].QueuePosition < torrents[i].QueuePosition
@@ -201,20 +207,20 @@ func sendTorrentList(chatID int64, sf showFilter) error {
 	for _, i := range ctx.TorrentCache.Items {
 		switch sf {
 		case All:
-			err := sendTorrent(chatID, i)
+			err := sendTorrent(ctx.chatID, i)
 			if err != nil {
 				return err
 			}
 		case Active:
 			if i.Status != 0 && i.ErrorString == "" {
-				err := sendTorrent(chatID, i)
+				err := sendTorrent(ctx.chatID, i)
 				if err != nil {
 					return err
 				}
 			}
 		case NotActive:
 			if i.Status == 0 {
-				err := sendTorrent(chatID, i)
+				err := sendTorrent(ctx.chatID, i)
 				if err != nil {
 					return err
 				}
@@ -278,7 +284,7 @@ type filesList struct {
 	Downloading bool
 }
 
-func sendTorrentDetails(hash string, chatID int64, messageID int, md5SumOld string) error {
+func sendTorrentDetails(hash string, messageID int, md5SumOld string) error {
 	updateCache()
 	t, err := getTorrentDetails(hash)
 
@@ -294,7 +300,7 @@ func sendTorrentDetails(hash string, chatID int64, messageID int, md5SumOld stri
 		return err
 	}
 	replyMarkup := torrentDetailKbd(hash, TORRENT.Status)
-	err = sendEditedMessage(chatID, messageID, t, &replyMarkup)
+	err = sendEditedMessage(ctx.chatID, messageID, t, &replyMarkup)
 	if err != nil {
 		return err
 	}
@@ -302,7 +308,7 @@ func sendTorrentDetails(hash string, chatID int64, messageID int, md5SumOld stri
 	return nil
 }
 
-func sendTorrentDetailsByID(torrentID int64, chatID int64) error {
+func sendTorrentDetailsByID(torrentID int64) error {
 	hash := ctx.TorrentCache.GetHash(int(torrentID))
 
 	t, err := getTorrentDetails(hash)
@@ -315,7 +321,7 @@ func sendTorrentDetailsByID(torrentID int64, chatID int64) error {
 		return err
 	}
 	replyMarkup := torrentDetailKbd(hash, TORRENT.Status)
-	err = sendNewMessage(chatID, t, &replyMarkup)
+	err = sendNewMessage(ctx.chatID, t, &replyMarkup)
 	if err != nil {
 		return err
 	}
@@ -323,7 +329,7 @@ func sendTorrentDetailsByID(torrentID int64, chatID int64) error {
 	return nil
 }
 
-func sendTorrentFiles(hash string, chatID int64) error {
+func sendTorrentFiles(hash string) error {
 	//tMap, err := ctx.TrApi.GetTorrentMap()
 	//if err != nil {
 	//	return err
@@ -334,7 +340,7 @@ func sendTorrentFiles(hash string, chatID int64) error {
 
 	for i := 0; i < len(files); i++ {
 
-		msg := tgbotapi.NewMessage(chatID, "")
+		msg := tgbotapi.NewMessage(ctx.chatID, "")
 		msg.ParseMode = "MarkdownV2"
 
 		t, err := template.ParseFiles("templates/torrentFile.gotmpl")
@@ -367,7 +373,7 @@ func sendTorrentFiles(hash string, chatID int64) error {
 // ACTIONS WITH TORRENT
 //======================================================================================================================
 
-func addTorrentMagnetQuestion(chatID int64, text string) error {
+func addTorrentMagnetQuestion(text string) error {
 	var name string
 	var trackers []string
 	for _, i := range strings.Split(text, "&") {
@@ -387,7 +393,7 @@ func addTorrentMagnetQuestion(chatID int64, text string) error {
 	message := fmt.Sprintf("❔ To add:```%s```\nTrackers:```%s```", name, strings.Join(trackers, "\n"))
 
 	kbd := torrentAddKbd(false)
-	err := sendNewMessage(chatID, message, &kbd)
+	err := sendNewMessage(ctx.chatID, message, &kbd)
 	if err != nil {
 		return err
 	}
@@ -397,9 +403,9 @@ func addTorrentMagnetQuestion(chatID int64, text string) error {
 	return nil
 }
 
-func addTorrentMagnet(chatID int64, operation string) error {
+func addTorrentMagnet(operation string) error {
 	if operation == "add-no" {
-		err := sendNewMessage(chatID, "Okay", nil)
+		err := sendNewMessage(ctx.chatID, "Okay", nil)
 		if err != nil {
 			return err
 		}
@@ -419,7 +425,7 @@ func addTorrentMagnet(chatID int64, operation string) error {
 
 	msg := fmt.Sprintf("`%s` - Sucesefully added", res.Name)
 
-	err = sendNewMessage(chatID, msg, nil)
+	err = sendNewMessage(ctx.chatID, msg, nil)
 	if err != nil {
 		return err
 	}
@@ -429,7 +435,7 @@ func addTorrentMagnet(chatID int64, operation string) error {
 	return nil
 }
 
-func stopTorrent(hash string, chatID int64, messageID int) error {
+func stopTorrent(hash string, messageID int) error {
 	if TORRENT == nil {
 		_, err := getTorrentDetails(hash)
 		if err != nil {
@@ -445,7 +451,7 @@ func stopTorrent(hash string, chatID int64, messageID int) error {
 
 	msgTxt, err := getTorrentDetails(hash)
 	newMarkup := torrentDetailKbd(hash, TORRENT.Status)
-	err = sendEditedMessage(chatID, messageID, msgTxt, &newMarkup)
+	err = sendEditedMessage(ctx.chatID, messageID, msgTxt, &newMarkup)
 	if err != nil {
 		return err
 	}
@@ -455,7 +461,7 @@ func stopTorrent(hash string, chatID int64, messageID int) error {
 	return nil
 }
 
-func startTorrent(hash string, chatID int64, messageID int) error {
+func startTorrent(hash string, messageID int) error {
 	if TORRENT == nil {
 		_, err := getTorrentDetails(hash)
 		if err != nil {
@@ -475,7 +481,7 @@ func startTorrent(hash string, chatID int64, messageID int) error {
 	}
 
 	newMarkup := torrentDetailKbd(hash, TORRENT.Status)
-	err = sendEditedMessage(chatID, messageID, msgTxt, &newMarkup)
+	err = sendEditedMessage(ctx.chatID, messageID, msgTxt, &newMarkup)
 	if err != nil {
 		return err
 	}
@@ -485,14 +491,14 @@ func startTorrent(hash string, chatID int64, messageID int) error {
 	return nil
 }
 
-func removeTorrentQuestion(hash string, chatID int64, messageID int) error {
+func removeTorrentQuestion(hash string, messageID int) error {
 	msgTxt, err := getTorrentDetails(hash)
 	if err != nil {
 		return err
 	}
 
 	replyMarkup := torrentDeleteKbd(hash)
-	err = sendEditedMessage(chatID, messageID, msgTxt, &replyMarkup)
+	err = sendEditedMessage(ctx.chatID, messageID, msgTxt, &replyMarkup)
 	if err != nil {
 		return err
 	}
@@ -500,7 +506,7 @@ func removeTorrentQuestion(hash string, chatID int64, messageID int) error {
 	return nil
 }
 
-func removeTorrent(hash string, chatID int64, messageID int, what string) error {
+func removeTorrent(hash string, messageID int, what string) error {
 	whatS := strings.Split(what, "-")[1]
 	switch whatS {
 	case "yes":
@@ -520,7 +526,7 @@ func removeTorrent(hash string, chatID int64, messageID int, what string) error 
 		}
 
 		replyMarkup := torrentDetailKbd(hash, TORRENT.Status)
-		err = sendEditedMessage(chatID, messageID, msgTxt, &replyMarkup)
+		err = sendEditedMessage(ctx.chatID, messageID, msgTxt, &replyMarkup)
 		if err != nil {
 			return err
 		}
@@ -529,7 +535,7 @@ func removeTorrent(hash string, chatID int64, messageID int, what string) error 
 		return fmt.Errorf("nope, failed")
 	}
 
-	err := sendEditedMessage(chatID, messageID, "removed", nil)
+	err := sendEditedMessage(ctx.chatID, messageID, "removed", nil)
 	if err != nil {
 		return err
 	}
@@ -539,14 +545,14 @@ func removeTorrent(hash string, chatID int64, messageID int, what string) error 
 	return nil
 }
 
-func queueTorrentQuestion(hash string, chatID int64, messageID int) error {
+func queueTorrentQuestion(hash string, messageID int) error {
 	msgTxt, err := getTorrentDetails(hash)
 	if err != nil {
 		return err
 	}
 
 	replyMarkup := torrentQueueKbd(hash)
-	err = sendEditedMessage(chatID, messageID, msgTxt, &replyMarkup)
+	err = sendEditedMessage(ctx.chatID, messageID, msgTxt, &replyMarkup)
 	if err != nil {
 		return err
 	}
@@ -554,7 +560,7 @@ func queueTorrentQuestion(hash string, chatID int64, messageID int) error {
 	return nil
 }
 
-func queueTorrent(hash string, chatID int64, messageID int, what string) error {
+func queueTorrent(hash string, messageID int, what string) error {
 	whatS := strings.Split(what, "-")[1]
 	switch whatS {
 	case "top":
@@ -589,7 +595,7 @@ func queueTorrent(hash string, chatID int64, messageID int, what string) error {
 	}
 
 	replyMarkup := torrentDetailKbd(hash, TORRENT.Status)
-	err = sendEditedMessage(chatID, messageID, msgTxt, &replyMarkup)
+	err = sendEditedMessage(ctx.chatID, messageID, msgTxt, &replyMarkup)
 	if err != nil {
 		return err
 	}
@@ -610,7 +616,7 @@ type bencodeTorrent struct {
 	Info     bencodeInfo `bencode:"info"`
 }
 
-func addTorrentFileQuestion(chatID int64, fileID string) error {
+func addTorrentFileQuestion(fileID string) error {
 	_url, err := ctx.Bot.GetFileDirectURL(fileID)
 	if err != nil {
 		return err
@@ -660,13 +666,13 @@ func addTorrentFileQuestion(chatID int64, fileID string) error {
 		}
 		defer resp.Body.Close()
 
-		err = sendNewImagedMessage(chatID, bto.Info.Name, resp.Body, &kbdAdd)
+		err = sendNewImagedMessage(ctx.chatID, bto.Info.Name, resp.Body, &kbdAdd)
 		if err != nil {
 			return err
 		}
 
 	} else {
-		err = sendNewMessage(chatID, "```"+"Free space: "+glh.ConvertBytes(float64(freeSpaceData), glh.Size)+"```", nil)
+		err = sendNewMessage(ctx.chatID, "```"+"Free space: "+glh.ConvertBytes(float64(freeSpaceData), glh.Size)+"```", nil)
 		if err != nil {
 			return err
 		}
@@ -675,11 +681,11 @@ func addTorrentFileQuestion(chatID int64, fileID string) error {
 	return nil
 }
 
-func addTorrentFile(chatID int64, operation string) error {
+func addTorrentFile(operation string) error {
 
 	if operation == "file+add-no" {
 		TFILE = nil
-		err := sendNewMessage(chatID, "Okay", nil)
+		err := sendNewMessage(ctx.chatID, "Okay", nil)
 		if err != nil {
 			return err
 		}
@@ -701,7 +707,7 @@ func addTorrentFile(chatID int64, operation string) error {
 
 	msg := fmt.Sprintf("`%s` - Sucesefully added", res.Name)
 
-	err = sendNewMessage(chatID, msg, nil)
+	err = sendNewMessage(ctx.chatID, msg, nil)
 	if err != nil {
 		return err
 	}

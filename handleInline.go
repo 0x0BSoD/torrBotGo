@@ -11,16 +11,15 @@ func handleInline(upd tgbotapi.Update) {
 	if upd.CallbackQuery.Data == "" {
 		return
 	}
-	chatID := upd.CallbackQuery.Message.Chat.ID
 	messageID := upd.CallbackQuery.Message.MessageID
 	var err error
 
 	if strings.HasPrefix(upd.CallbackQuery.Data, "file+add-") {
-		err = addTorrentFile(chatID, upd.CallbackQuery.Data)
+		err = addTorrentFile(upd.CallbackQuery.Data)
 	}
 
 	if strings.HasPrefix(upd.CallbackQuery.Data, "add-") {
-		err = addTorrentMagnet(chatID, upd.CallbackQuery.Data)
+		err = addTorrentMagnet(upd.CallbackQuery.Data)
 	}
 
 	if strings.Contains(upd.CallbackQuery.Data, "_") {
@@ -30,49 +29,42 @@ func handleInline(upd tgbotapi.Update) {
 			fmt.Println("====")
 			fmt.Println(upd.CallbackQuery.Message.Text)
 			fmt.Println("====")
-			err = sendTorrentDetails(request[1], chatID, messageID, glh.GetMD5Hash(upd.CallbackQuery.Message.Text))
+			err = sendTorrentDetails(request[1], messageID, glh.GetMD5Hash(upd.CallbackQuery.Message.Text))
 		case "delete":
-			err = removeTorrentQuestion(request[1], chatID, messageID)
+			err = removeTorrentQuestion(request[1], messageID)
 		case "delete-yes":
-			err = removeTorrent(request[1], chatID, messageID, request[0])
+			err = removeTorrent(request[1], messageID, request[0])
 		case "delete-yes+data":
-			err = removeTorrent(request[1], chatID, messageID, request[0])
+			err = removeTorrent(request[1], messageID, request[0])
 		case "delete-no":
-			err = removeTorrent(request[1], chatID, messageID, request[0])
+			err = removeTorrent(request[1], messageID, request[0])
 		case "files":
-			err = sendTorrentFiles(request[1], chatID)
+			err = sendTorrentFiles(request[1])
 		case "stop":
-			err = stopTorrent(request[1], chatID, messageID)
+			err = stopTorrent(request[1], messageID)
 		case "start":
-			err = startTorrent(request[1], chatID, messageID)
+			err = startTorrent(request[1], messageID)
 		case "priority":
-			err = queueTorrentQuestion(request[1], chatID, messageID)
+			err = queueTorrentQuestion(request[1], messageID)
 		case "prior-top":
-			err = queueTorrent(request[1], chatID, messageID, request[0])
+			err = queueTorrent(request[1], messageID, request[0])
 		case "prior-up":
-			err = queueTorrent(request[1], chatID, messageID, request[0])
+			err = queueTorrent(request[1], messageID, request[0])
 		case "prior-down":
-			err = queueTorrent(request[1], chatID, messageID, request[0])
+			err = queueTorrent(request[1], messageID, request[0])
 		case "prior-bottom":
-			err = queueTorrent(request[1], chatID, messageID, request[0])
+			err = queueTorrent(request[1], messageID, request[0])
 		case "prior-no":
-			err = queueTorrent(request[1], chatID, messageID, request[0])
+			err = queueTorrent(request[1], messageID, request[0])
+		case "json":
+			err = sendJsonConfig()
 		default:
-			sendError(chatID, "I don't know that command, handleInline")
+			sendError("I don't know that command, handleInline")
 			return
 		}
 	}
-	//else {
-	//	switch upd.CallbackQuery.Data {
-	//	case "json":
-	//		msg.Text = sendJsonConfig()
-	//	default:
-	//		sendError(ID, "I don't know that command")
-	//		return
-	//	}
-	//}
 
 	if err != nil {
-		sendError(chatID, err.Error())
+		sendError(err.Error())
 	}
 }
