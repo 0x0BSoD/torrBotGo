@@ -2,16 +2,19 @@ package main
 
 import (
 	"fmt"
+	"strings"
+
 	glh "github.com/0x0BSoD/goLittleHelpers"
 	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
-	"strings"
 )
 
 func handleInline(upd tgbotapi.Update) {
 	if upd.CallbackQuery.Data == "" {
 		return
 	}
+
 	messageID := upd.CallbackQuery.Message.MessageID
+	ctx.chatID = upd.CallbackQuery.Message.Chat.ID
 	var err error
 
 	if strings.HasPrefix(upd.CallbackQuery.Data, "file+add-") {
@@ -57,7 +60,7 @@ func handleInline(upd tgbotapi.Update) {
 		case "prior-no":
 			err = queueTorrent(request[1], messageID, request[0])
 		case "json":
-			err = sendJsonConfig()
+			err = sendJSONConfig()
 		default:
 			sendError("I don't know that command, handleInline")
 			return

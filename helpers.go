@@ -3,9 +3,8 @@ package main
 import (
 	"crypto/sha1"
 	"encoding/base64"
+	"errors"
 	"fmt"
-	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
-	"github.com/PuerkitoBio/goquery"
 	"io"
 	"log"
 	"net/http"
@@ -13,9 +12,17 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
+	"github.com/PuerkitoBio/goquery"
 )
 
 func sendError(text string) {
+	if ctx.chatID == 0 {
+		fmt.Errorf("chatID empty, %s", text)
+		return
+	}
+
 	msg := tgbotapi.NewVideoUpload(ctx.chatID, "error.mp4")
 	msg.Caption = text
 	if _, err := ctx.Bot.Send(msg); err != nil {
@@ -55,6 +62,10 @@ func parseStatus(s int) (string, string) {
 }
 
 func sendNewMessage(chatID int64, text string, replyMarkup *tgbotapi.InlineKeyboardMarkup) error {
+	if ctx.chatID == 0 {
+		return errors.New("chatID empty")
+	}
+
 	if text == "" {
 		return fmt.Errorf("message cannot be empty")
 	}
@@ -124,7 +135,13 @@ func sendNewImagedMessage(chatID int64, text string, image io.Reader, replyMarku
 	return nil
 }
 
-func getImgFromTracker(url string) (string, error) {
+// rutracker
+func getImgFromTrackerRutracker(url string) (string, error) {
+
+	if !strings.HasPrefix(url, "https://rutracker.org/") {
+		return "", errors.New("not a rutracker")
+	}
+
 	resp, err := http.Get(url)
 	if err != nil {
 		return "", err
@@ -135,12 +152,12 @@ func getImgFromTracker(url string) (string, error) {
 		return "", err
 	}
 
-	var imgUrl string
+	var imgURL string
 	doc.Find(".postImgAligned").Each(func(i int, s *goquery.Selection) {
-		imgUrl, _ = s.Attr("title")
+		imgURL, _ = s.Attr("title")
 	})
 
-	return imgUrl, nil
+	return imgURL, nil
 }
 
 func httpClient() *http.Client {
@@ -162,6 +179,8 @@ func escapeAll(text string) string {
 		"[", "\\[",
 		"]", "\\]",
 		"(", "\\(",
-		")", "\\)")
+		")", "\\)",
+		"|", "\\|",
+		"!", "\\!")
 	return re.Replace(text)
 }

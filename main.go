@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/0x0BSoD/telegram-bot-api"
+	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
 	"github.com/0x0BSoD/transmission"
 )
 
@@ -37,7 +37,7 @@ func main() {
 	if err != nil {
 		log.Panic(err)
 	}
-	b.Debug = true
+	b.Debug = cfg.Debug
 	ctx.Bot = b
 	ctx.Categories = cfg.Categories
 
@@ -64,6 +64,13 @@ func main() {
 		fmt.Println("✔️")
 	}()
 
+	if cfg.DefaultDownloadDir != "" {
+		err := t.Session.Set(transmission.SetSessionArgs{DownloadDir: cfg.DefaultDownloadDir})
+		if err != nil {
+			log.Panic(err)
+		}
+	}
+
 	fmt.Print("Updating transmission session info ")
 	err = t.Session.Update()
 	if err != nil {
@@ -71,13 +78,6 @@ func main() {
 		log.Panic(err)
 	}
 	fmt.Println("✔️")
-
-	if cfg.DefaultDownloadDir != "" {
-		err := t.Session.Set(transmission.SetSessionArgs{DownloadDir: cfg.DefaultDownloadDir})
-		if err != nil {
-			log.Panic(err)
-		}
-	}
 
 	fmt.Print("Setting torrents cache ")
 	tMap, err := t.GetTorrentMap()

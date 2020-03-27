@@ -6,20 +6,26 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	glh "github.com/0x0BSoD/goLittleHelpers"
-	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
-	"github.com/0x0BSoD/transmission"
-	"github.com/jackpal/bencode-go"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"strings"
 	"text/template"
+
+	glh "github.com/0x0BSoD/goLittleHelpers"
+	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
+	"github.com/0x0BSoD/transmission"
+	"github.com/jackpal/bencode-go"
 )
 
+// TORRENT - selected torrent
 var TORRENT *transmission.Torrent
+
+// MAGENT - magent link
 var MAGENT string
+
+// TFILE - downloaded torrent file
 var TFILE []byte
 
 // ========================
@@ -108,7 +114,7 @@ func sendConfig() (string, error) {
 	return dRes.String(), nil
 }
 
-func sendJsonConfig() error {
+func sendJSONConfig() error {
 	err := ctx.TrApi.Session.Update()
 	if err != nil {
 		return err
@@ -273,9 +279,9 @@ func getTorrentDetails(hash string) (string, error) {
 		}
 
 		return dRes.String(), nil
-	} else {
-		return "", errors.New("torrent not found")
 	}
+
+	return "", errors.New("torrent not found")
 }
 
 type filesList struct {
@@ -643,28 +649,56 @@ func addTorrentFileQuestion(fileID string) error {
 		_ = glh.PrettyPrint(bto)
 	}
 
-	freeSpaceData, err := ctx.TrApi.FreeSpace(ctx.TrApi.Session.DownloadDir)
+	// freeSpaceData, err := ctx.TrApi.FreeSpace(ctx.TrApi.Session.DownloadDir)
 	kbdAdd := torrentAddKbd(true)
 
-	// torrent from rutracker
-	if bto.Comment != "" {
-		imgUrl, err := getImgFromTracker(bto.Comment)
+	fallback := func(name string, kbd *tgbotapi.InlineKeyboardMarkup) error {
+		err := sendNewMessage(ctx.chatID, name, kbd)
 		if err != nil {
 			return err
 		}
+		return nil
+	}
 
-		_, err = url.ParseRequestURI(imgUrl)
+	// torrent from rutracker
+	if bto.Comment != "" {
+		imgURL, err := getImgFromTrackerRutracker(bto.Comment)
 		if err != nil {
-			return err
+			err := fallback(bto.Info.Name, &kbdAdd)
+			if err != nil {
+				return err
+			}
+			return nil
+		}
+
+		_, err = url.ParseRequestURI(imgURL)
+		if err != nil {
+			err := fallback(bto.Info.Name, &kbdAdd)
+			if err != nil {
+				return err
+			}
+			return nil
 		}
 
 		client := httpClient()
 
-		resp, err := client.Get(imgUrl)
+		resp, err := client.Get(imgURL)
 		if err != nil {
-			return err
+			err := fallback(bto.Info.Name, &kbdAdd)
+			if err != nil {
+				return err
+			}
+			return nil
 		}
 		defer resp.Body.Close()
+
+		if resp.StatusCode != 200 {
+			err := fallback(bto.Info.Name, &kbdAdd)
+			if err != nil {
+				return err
+			}
+			return nil
+		}
 
 		err = sendNewImagedMessage(ctx.chatID, bto.Info.Name, resp.Body, &kbdAdd)
 		if err != nil {
@@ -672,7 +706,7 @@ func addTorrentFileQuestion(fileID string) error {
 		}
 
 	} else {
-		err = sendNewMessage(ctx.chatID, "```"+"Free space: "+glh.ConvertBytes(float64(freeSpaceData), glh.Size)+"```", nil)
+		err := fallback(bto.Info.Name, &kbdAdd)
 		if err != nil {
 			return err
 		}

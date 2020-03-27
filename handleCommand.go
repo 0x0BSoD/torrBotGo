@@ -1,19 +1,21 @@
 package main
 
 import (
-	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
 	"log"
+
+	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
 )
 
 func handleCommand(upd tgbotapi.Update) {
 	ID := upd.Message.Chat.ID
+	ctx.chatID = ID
 	msg := tgbotapi.NewMessage(ID, "")
 	msg.ParseMode = "MarkdownV2"
 	var err error
 	var text string
+
 	switch upd.Message.Command() {
 	case "help", "start":
-		ctx.chatID = upd.Message.Chat.ID
 		text = "Telegram Bot as interface for transmission"
 		msg.ReplyMarkup = mainKbd
 	case "status":

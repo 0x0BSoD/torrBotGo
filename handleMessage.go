@@ -1,13 +1,16 @@
 package main
 
 import (
-	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
 	"strconv"
 	"strings"
+
+	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
 )
 
 func handleMessage(upd tgbotapi.Update) {
 	var err error
+
+	ctx.chatID = upd.Message.Chat.ID
 
 	if torrentID, err := strconv.ParseInt(upd.Message.Text, 10, 64); err == nil {
 		err = sendTorrentDetailsByID(torrentID)
