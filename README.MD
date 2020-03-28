@@ -8,7 +8,7 @@ Telegram bot as a transmission interface.
  * Start / Stop torrents
  * Change torrent priority
  * Remove torrent
- * Message when torrent done (TBD)
+ * Message when torrent done
 
 Config:
 ```json
@@ -20,6 +20,7 @@ Config:
     "user": "USER",
     "password": "PASSWORD"
   },
+  "img_dir": "/app/img",
   "default_download_dir": "/mnt/downloads",
   "categories": {
     "Films": "/Films",

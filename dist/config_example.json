@@ -6,6 +6,7 @@
     "user": "USER",
     "password": "PASSWORD"
   },
+  "img_dir": "/tmp",
   "default_download_dir": "/mnt/downloads",
   "categories": {
     "Films": "/Films",
