@@ -21,9 +21,9 @@ func handleMessage(upd tgbotapi.Update) {
 	}
 
 	if upd.Message.Document != nil {
-		err = addTorrentFileQuestion(upd.Message.Document.FileID)
+		err = addTorrentFileQuestion(upd.Message.Document.FileID, upd.Message.MessageID)
 	} else if strings.HasPrefix(upd.Message.Text, "magnet:") {
-		err = addTorrentMagnetQuestion(upd.Message.Text)
+		err = addTorrentMagnetQuestion(upd.Message.Text, upd.Message.MessageID)
 	} else {
 		switch upd.Message.Text {
 		case "All torrents":

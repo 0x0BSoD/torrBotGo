@@ -2,9 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
+	"strings"
 )
 
 type config struct {
@@ -13,6 +14,7 @@ type config struct {
 	Transmission       trConfig          `json:"transmission"`
 	DefaultDownloadDir string            `json:"default_download_dir"`
 	Categories         map[string]string `json:"categories"`
+	ImgDir             string            `json:"img_dir"`
 }
 
 type trConfig struct {
@@ -24,18 +26,33 @@ type trConfig struct {
 func marshalConf(path string) config {
 	f, err := os.Open(path)
 	if err != nil {
-		log.Panicf("config file '%s' not found, %s", path, err.Error())
+		fmt.Printf("config file '%s' not found, %s", path, err.Error())
+		os.Exit(-1)
 	}
 
 	b, err := ioutil.ReadAll(f)
 	if err != nil {
-		log.Panicf("can't read file '%s', %s", path, err.Error())
+		fmt.Printf("can't read file '%s', %s", path, err.Error())
+		os.Exit(-1)
 	}
 
 	var result config
 	err = json.Unmarshal(b, &result)
 	if err != nil {
-		log.Panicf("can't parse file '%s', %s", path, err.Error())
+		fmt.Printf("can't parse file '%s', %s", path, err.Error())
+		os.Exit(-1)
+	}
+
+	if _, err := os.Stat(result.ImgDir); os.IsNotExist(err) {
+		err = os.MkdirAll(result.ImgDir, 0755)
+		if err != nil {
+			fmt.Printf("can't create ImgDir directory '%s', %s", result.ImgDir, err.Error())
+			os.Exit(-1)
+		}
+	}
+
+	if !strings.HasSuffix(result.ImgDir, "/") {
+		result.ImgDir += "/"
 	}
 
 	return result

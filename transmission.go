@@ -28,6 +28,9 @@ var MAGENT string
 // TFILE - downloaded torrent file
 var TFILE []byte
 
+// MESSAGEID - id of 'dialog' message
+var MESSAGEID int
+
 // ========================
 // STATUS
 //=========================
@@ -379,7 +382,7 @@ func sendTorrentFiles(hash string) error {
 // ACTIONS WITH TORRENT
 //======================================================================================================================
 
-func addTorrentMagnetQuestion(text string) error {
+func addTorrentMagnetQuestion(text string, messageID int) error {
 	var name string
 	var trackers []string
 	for _, i := range strings.Split(text, "&") {
@@ -396,7 +399,7 @@ func addTorrentMagnetQuestion(text string) error {
 		}
 	}
 
-	message := fmt.Sprintf("❔ To add:```%s```\nTrackers:```%s```", name, strings.Join(trackers, "\n"))
+	message := fmt.Sprintf("`%s`\nTrackers:`%s`", name, strings.Join(trackers, "\n"))
 
 	kbd := torrentAddKbd(false)
 	err := sendNewMessage(ctx.chatID, message, &kbd)
@@ -405,6 +408,7 @@ func addTorrentMagnetQuestion(text string) error {
 	}
 
 	MAGENT = text
+	MESSAGEID = messageID
 
 	return nil
 }
@@ -429,7 +433,12 @@ func addTorrentMagnet(operation string) error {
 		return err
 	}
 
-	msg := fmt.Sprintf("`%s` - Sucesefully added", res.Name)
+	msg := fmt.Sprintf("Sucesefully added\n`%s`\nID:`%d`", res.Name, res.ID)
+
+	err = removeMessage(ctx.chatID, MESSAGEID)
+	if err != nil {
+		return err
+	}
 
 	err = sendNewMessage(ctx.chatID, msg, nil)
 	if err != nil {
@@ -622,7 +631,7 @@ type bencodeTorrent struct {
 	Info     bencodeInfo `bencode:"info"`
 }
 
-func addTorrentFileQuestion(fileID string) error {
+func addTorrentFileQuestion(fileID string, messageID int) error {
 	_url, err := ctx.Bot.GetFileDirectURL(fileID)
 	if err != nil {
 		return err
@@ -712,6 +721,8 @@ func addTorrentFileQuestion(fileID string) error {
 		}
 	}
 
+	MESSAGEID = messageID
+
 	return nil
 }
 
@@ -739,7 +750,12 @@ func addTorrentFile(operation string) error {
 		return err
 	}
 
-	msg := fmt.Sprintf("`%s` - Sucesefully added", res.Name)
+	msg := fmt.Sprintf("Sucesefully added\n`%s`\nID:`%d`", res.Name, res.ID)
+
+	err = removeMessage(ctx.chatID, MESSAGEID)
+	if err != nil {
+		return err
+	}
 
 	err = sendNewMessage(ctx.chatID, msg, nil)
 	if err != nil {

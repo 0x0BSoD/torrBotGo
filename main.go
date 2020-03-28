@@ -18,6 +18,7 @@ type GlobalContext struct {
 	Debug        bool
 	Categories   map[string]string
 	TorrentCache Torrents
+	imgDir       string
 	chatID       int64
 }
 
@@ -40,6 +41,7 @@ func main() {
 	b.Debug = cfg.Debug
 	ctx.Bot = b
 	ctx.Categories = cfg.Categories
+	ctx.imgDir = cfg.ImgDir
 
 	conf := transmission.Config{
 		Address:  cfg.Transmission.Uri,

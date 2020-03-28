@@ -103,6 +103,18 @@ func sendEditedMessage(chatID int64, messageID int, text string, replyMarkup *tg
 	return nil
 }
 
+func removeMessage(chatID int64, messageID int) error {
+	msgRm := tgbotapi.NewDeleteMessage(chatID, messageID)
+
+	fmt.Println(msgRm)
+
+	if _, err := ctx.Bot.Send(msgRm); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func sendNewImagedMessage(chatID int64, text string, image io.Reader, replyMarkup *tgbotapi.InlineKeyboardMarkup) error {
 
 	hasher := sha1.New()
@@ -110,7 +122,7 @@ func sendNewImagedMessage(chatID int64, text string, image io.Reader, replyMarku
 	hasher.Write([]byte(tmHash))
 	sha := base64.URLEncoding.EncodeToString(hasher.Sum(nil))
 
-	file, err := os.Create("/tmp/" + sha)
+	file, err := os.Create(ctx.imgDir + sha)
 	if err != nil {
 		return err
 	}
@@ -120,7 +132,7 @@ func sendNewImagedMessage(chatID int64, text string, image io.Reader, replyMarku
 		return err
 	}
 
-	msg := tgbotapi.NewPhotoUpload(chatID, "/tmp/"+sha)
+	msg := tgbotapi.NewPhotoUpload(chatID, ctx.imgDir+sha)
 	msg.ParseMode = "MarkdownV2"
 
 	if replyMarkup != nil {

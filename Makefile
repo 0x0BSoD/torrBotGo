@@ -1,4 +1,4 @@
 build:
 	go fmt *.go
-	GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o transmissionBot
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build  -x -ldflags="-w -s" -o transmissionBot
 	mv transmissionBot ./dist
