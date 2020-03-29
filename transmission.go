@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"strings"
 	"text/template"
+	"time"
 
 	glh "github.com/0x0BSoD/goLittleHelpers"
 	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
@@ -175,7 +176,7 @@ const (
 //======================================================================================================================
 
 func sendTorrent(id int64, torr *transmission.Torrent) error {
-	t, err := template.ParseFiles("templates/torrentList.gotmpl")
+	t, err := template.ParseFiles("templates/torrentListItem.gotmpl")
 	if err != nil {
 		return err
 	}
@@ -295,19 +296,18 @@ type filesList struct {
 
 func sendTorrentDetails(hash string, messageID int, md5SumOld string) error {
 	updateCache()
+
 	t, err := getTorrentDetails(hash)
-
-	fmt.Println("====")
-	fmt.Println(strings.ReplaceAll(t, "`", ""))
-	fmt.Println("====")
-
-	if glh.GetMD5Hash(strings.ReplaceAll(t, "`", "")) == md5SumOld {
-		return nil
-	}
-
 	if err != nil {
 		return err
 	}
+
+	tHash := strings.ReplaceAll(strings.ReplaceAll(t, "`", ""), "\n", "")
+
+	if glh.GetMD5Hash(tHash) == md5SumOld {
+		return nil
+	}
+
 	replyMarkup := torrentDetailKbd(hash, TORRENT.Status)
 	err = sendEditedMessage(ctx.chatID, messageID, t, &replyMarkup)
 	if err != nil {
@@ -322,10 +322,6 @@ func sendTorrentDetailsByID(torrentID int64) error {
 
 	t, err := getTorrentDetails(hash)
 
-	fmt.Println("====")
-	fmt.Println(strings.ReplaceAll(t, "`", ""))
-	fmt.Println("====")
-
 	if err != nil {
 		return err
 	}
@@ -339,11 +335,6 @@ func sendTorrentDetailsByID(torrentID int64) error {
 }
 
 func sendTorrentFiles(hash string) error {
-	//tMap, err := ctx.TrApi.GetTorrentMap()
-	//if err != nil {
-	//	return err
-	//}
-
 	files := *ctx.TorrentCache.Items[hash].Files
 	filesStats := *ctx.TorrentCache.Items[hash].FileStats
 
@@ -352,7 +343,7 @@ func sendTorrentFiles(hash string) error {
 		msg := tgbotapi.NewMessage(ctx.chatID, "")
 		msg.ParseMode = "MarkdownV2"
 
-		t, err := template.ParseFiles("templates/torrentFile.gotmpl")
+		t, err := template.ParseFiles("templates/torrentFileItem.gotmpl")
 		if err != nil {
 			log.Panic(err)
 		}
@@ -450,7 +441,7 @@ func addTorrentMagnet(operation string) error {
 	return nil
 }
 
-func stopTorrent(hash string, messageID int) error {
+func stopTorrent(hash string, messageID int, md5SumOld string) error {
 	if TORRENT == nil {
 		_, err := getTorrentDetails(hash)
 		if err != nil {
@@ -464,19 +455,28 @@ func stopTorrent(hash string, messageID int) error {
 	}
 	TORRENT = nil
 
-	msgTxt, err := getTorrentDetails(hash)
+	time.Sleep(6 * time.Second)
+
+	updateCache()
+
+	t, err := getTorrentDetails(hash)
+
+	tHash := strings.ReplaceAll(strings.ReplaceAll(t, "`", ""), "\n", "")
+
+	if glh.GetMD5Hash(tHash) == md5SumOld {
+		return nil
+	}
+
 	newMarkup := torrentDetailKbd(hash, TORRENT.Status)
-	err = sendEditedMessage(ctx.chatID, messageID, msgTxt, &newMarkup)
+	err = sendEditedMessage(ctx.chatID, messageID, t, &newMarkup)
 	if err != nil {
 		return err
 	}
 
-	updateCache()
-
 	return nil
 }
 
-func startTorrent(hash string, messageID int) error {
+func startTorrent(hash string, messageID int, md5SumOld string) error {
 	if TORRENT == nil {
 		_, err := getTorrentDetails(hash)
 		if err != nil {
@@ -490,18 +490,26 @@ func startTorrent(hash string, messageID int) error {
 	}
 	TORRENT = nil
 
-	msgTxt, err := getTorrentDetails(hash)
+	time.Sleep(6 * time.Second)
+
+	updateCache()
+
+	t, err := getTorrentDetails(hash)
 	if err != nil {
 		return err
+	}
+
+	tHash := strings.ReplaceAll(strings.ReplaceAll(t, "`", ""), "\n", "")
+
+	if glh.GetMD5Hash(tHash) == md5SumOld {
+		return nil
 	}
 
 	newMarkup := torrentDetailKbd(hash, TORRENT.Status)
-	err = sendEditedMessage(ctx.chatID, messageID, msgTxt, &newMarkup)
+	err = sendEditedMessage(ctx.chatID, messageID, t, &newMarkup)
 	if err != nil {
 		return err
 	}
-
-	updateCache()
 
 	return nil
 }
@@ -669,6 +677,8 @@ func addTorrentFileQuestion(fileID string, messageID int) error {
 		return nil
 	}
 
+	MESSAGEID = messageID
+
 	// torrent from rutracker
 	if bto.Comment != "" {
 		imgURL, err := getImgFromTrackerRutracker(bto.Comment)
@@ -721,8 +731,6 @@ func addTorrentFileQuestion(fileID string, messageID int) error {
 		}
 	}
 
-	MESSAGEID = messageID
-
 	return nil
 }
 
@@ -767,6 +775,7 @@ func addTorrentFile(operation string) error {
 	return nil
 }
 
+// TODO: on start it triggered
 func updateCache() {
 	tMap, err := ctx.TrApi.GetTorrentMap()
 	if err != nil {
@@ -784,7 +793,7 @@ func updateCache() {
 			if err != nil {
 				panic(err)
 			}
-		} else if i.Status != 4 {
+		} else if i.Status != 4 && i.Status != 0 && i.PercentDone == 1 {
 			err := sendNewMessage(ctx.chatID, fmt.Sprintf("🎉 Downloaded\n%s", i.Name), nil)
 			if err != nil {
 				panic(err)

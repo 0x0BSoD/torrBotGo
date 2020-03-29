@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 
 	glh "github.com/0x0BSoD/goLittleHelpers"
@@ -26,13 +25,12 @@ func handleInline(upd tgbotapi.Update) {
 	}
 
 	if strings.Contains(upd.CallbackQuery.Data, "_") {
+		t := strings.ReplaceAll(strings.ReplaceAll(upd.CallbackQuery.Message.Text, "`", ""), "\n", "")
+
 		request := strings.Split(upd.CallbackQuery.Data, "_")
 		switch request[0] {
 		case "open", "update":
-			fmt.Println("====")
-			fmt.Println(upd.CallbackQuery.Message.Text)
-			fmt.Println("====")
-			err = sendTorrentDetails(request[1], messageID, glh.GetMD5Hash(upd.CallbackQuery.Message.Text))
+			err = sendTorrentDetails(request[1], messageID, glh.GetMD5Hash(t))
 		case "delete":
 			err = removeTorrentQuestion(request[1], messageID)
 		case "delete-yes":
@@ -44,9 +42,9 @@ func handleInline(upd tgbotapi.Update) {
 		case "files":
 			err = sendTorrentFiles(request[1])
 		case "stop":
-			err = stopTorrent(request[1], messageID)
+			err = stopTorrent(request[1], messageID, glh.GetMD5Hash(t))
 		case "start":
-			err = startTorrent(request[1], messageID)
+			err = startTorrent(request[1], messageID, glh.GetMD5Hash(t))
 		case "priority":
 			err = queueTorrentQuestion(request[1], messageID)
 		case "prior-top":

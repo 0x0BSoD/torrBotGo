@@ -106,8 +106,6 @@ func sendEditedMessage(chatID int64, messageID int, text string, replyMarkup *tg
 func removeMessage(chatID int64, messageID int) error {
 	msgRm := tgbotapi.NewDeleteMessage(chatID, messageID)
 
-	fmt.Println(msgRm)
-
 	if _, err := ctx.Bot.Send(msgRm); err != nil {
 		return err
 	}

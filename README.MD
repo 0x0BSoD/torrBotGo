@@ -1,5 +1,7 @@
 # Transmission telegram bot
 
+![Docker Automated build](https://img.shields.io/docker/automated/zlodey23/transmission-bot)
+
 Telegram bot as a transmission interface.
 
 #### Features
@@ -9,6 +11,7 @@ Telegram bot as a transmission interface.
  * Change torrent priority
  * Remove torrent
  * Message when torrent done
+ * Can get image of the torrent from rutracker if used torrent file
 
 Config:
 ```json
@@ -30,4 +33,14 @@ Config:
     "Education": "/Education"
   }
 }
+```
+
+## Docker
+
+ImgDir can't be `/tmp`. 
+
+Create the config.json described above and run:
+
+```
+docker run -v "$PWD/path/to/config.json":/config.json zlodey23/transmission-bot  
 ```

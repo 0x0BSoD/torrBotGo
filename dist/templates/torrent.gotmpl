@@ -1,12 +1,9 @@
-`{{ .Icon }} | {{ .Name }} | ID: {{ .ID }}`
-Place in queue: {{ .PosInQ }}
-Status: {{ .Status }}
+{{ .Icon }} | `{{ .Name }}` | ID: {{ .ID }}
 Size: {{ .Size }}
-{{ if .Error }}
-{{ .ErrorString }}
-{{end -}}
-{{ if .Active }}
-Peers: {{ .Peers }}
-{{ if .Downloading }} Percent done: {{ .Percents }} {{ end }}
-⬇️ Downloading: {{ .Dspeed }} | ⬆️ Uploading: {{ .Uspeed }}
-{{- end -}}
+Status: {{ .Status }}
+Place in queue: {{ .PosInQ }}
+`===========================================`
+{{ if .Active }}Peers: {{ .Peers }}{{ end }}
+{{ if .Active }}⬇️ Downloading: {{ .Dspeed }} | ⬆️ Uploading: {{ .Uspeed }}{{ end -}}
+{{ if .Downloading }}Percent done: {{ .Percents }}{{ end }}
+{{ if .Error }}{{ .ErrorString }}{{ end }}
