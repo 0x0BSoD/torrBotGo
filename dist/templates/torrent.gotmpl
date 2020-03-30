@@ -4,6 +4,6 @@ Status: {{ .Status }}
 Place in queue: {{ .PosInQ }}
 `===========================================`
 {{ if .Active }}Peers: {{ .Peers }}{{ end }}
-{{ if .Active }}⬇️ Downloading: {{ .Dspeed }} | ⬆️ Uploading: {{ .Uspeed }}{{ end -}}
+{{ if .Active }}⬇️ Downloading: {{ .Dspeed }} | ⬆️ Uploading: {{ .Uspeed }}{{ end }}
 {{ if .Downloading }}Percent done: {{ .Percents }}{{ end }}
 {{ if .Error }}{{ .ErrorString }}{{ end }}

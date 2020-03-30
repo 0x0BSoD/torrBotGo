@@ -43,6 +43,7 @@ type status struct {
 	DownloadS  string
 	Downloaded string
 	Uploaded   string
+	FreeSpace  string
 }
 
 func sendStatus() (string, error) {
@@ -60,6 +61,11 @@ func sendStatus() (string, error) {
 		_ = glh.PrettyPrint(stats)
 	}
 
+	freeSpaceData, err := ctx.TrApi.FreeSpace(ctx.TrApi.Session.DownloadDir)
+	if err != nil {
+		return "", err
+	}
+
 	var dRes bytes.Buffer
 	err = t.Execute(&dRes, status{
 		Active:     stats.ActiveTorrentCount,
@@ -68,6 +74,7 @@ func sendStatus() (string, error) {
 		DownloadS:  glh.ConvertBytes(float64(stats.DownloadSpeed), glh.Speed),
 		Uploaded:   glh.ConvertBytes(float64(stats.CurrentStats.UploadedBytes), glh.Size),
 		Downloaded: glh.ConvertBytes(float64(stats.CurrentStats.DownloadedBytes), glh.Size),
+		FreeSpace:  glh.ConvertBytes(float64(freeSpaceData), glh.Size),
 	})
 	if err != nil {
 		return "", err
@@ -666,7 +673,6 @@ func addTorrentFileQuestion(fileID string, messageID int) error {
 		_ = glh.PrettyPrint(bto)
 	}
 
-	// freeSpaceData, err := ctx.TrApi.FreeSpace(ctx.TrApi.Session.DownloadDir)
 	kbdAdd := torrentAddKbd(true)
 
 	fallback := func(name string, kbd *tgbotapi.InlineKeyboardMarkup) error {
