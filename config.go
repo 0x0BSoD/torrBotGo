@@ -18,7 +18,7 @@ type config struct {
 }
 
 type trConfig struct {
-	Uri      string `json:"uri"`
+	URI      string `json:"uri"`
 	User     string `json:"user"`
 	Password string `json:"password"`
 }

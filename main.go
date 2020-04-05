@@ -11,9 +11,10 @@ import (
 	"github.com/0x0BSoD/transmission"
 )
 
+// GlobalContext - struct for keeping needed stuff, i dragged it through almost all functions
 type GlobalContext struct {
 	Bot          *tgbotapi.BotAPI
-	TrApi        *transmission.Client
+	TrAPI        *transmission.Client
 	Mutex        sync.Mutex
 	Debug        bool
 	Categories   map[string]string

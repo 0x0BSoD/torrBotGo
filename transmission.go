@@ -47,7 +47,7 @@ type status struct {
 }
 
 func sendStatus() (string, error) {
-	stats, err := ctx.TrApi.Session.Stats()
+	stats, err := ctx.TrAPI.Session.Stats()
 	if err != nil {
 		return "", err
 	}
@@ -61,7 +61,7 @@ func sendStatus() (string, error) {
 		_ = glh.PrettyPrint(stats)
 	}
 
-	freeSpaceData, err := ctx.TrApi.FreeSpace(ctx.TrApi.Session.DownloadDir)
+	freeSpaceData, err := ctx.TrAPI.FreeSpace(ctx.TrAPI.Session.DownloadDir)
 	if err != nil {
 		return "", err
 	}
@@ -93,12 +93,12 @@ type sessConfig struct {
 }
 
 func sendConfig() (string, error) {
-	err := ctx.TrApi.Session.Update()
+	err := ctx.TrAPI.Session.Update()
 	if err != nil {
 		return "", err
 	}
 
-	sc := ctx.TrApi.Session
+	sc := ctx.TrAPI.Session
 
 	t, err := template.ParseFiles("templates/config.gotmpl")
 	if err != nil {
@@ -126,12 +126,12 @@ func sendConfig() (string, error) {
 }
 
 func sendJSONConfig() error {
-	err := ctx.TrApi.Session.Update()
+	err := ctx.TrAPI.Session.Update()
 	if err != nil {
 		return err
 	}
 
-	sc := ctx.TrApi.Session
+	sc := ctx.TrAPI.Session
 
 	if ctx.Debug {
 		_ = glh.PrettyPrint(sc)
@@ -150,7 +150,7 @@ func sendJSONConfig() error {
 	return nil
 }
 
-type Torrent struct {
+type torrent struct {
 	ID             int
 	Peers          int
 	Downloading    bool
@@ -173,9 +173,9 @@ type Torrent struct {
 type showFilter int
 
 const (
-	All showFilter = iota
-	Active
-	NotActive
+	all showFilter = iota
+	active
+	notActive
 )
 
 //======================================================================================================================
@@ -190,7 +190,7 @@ func sendTorrent(id int64, torr *transmission.Torrent) error {
 
 	icon, status := parseStatus(torr.Status)
 	var dRes bytes.Buffer
-	err = t.Execute(&dRes, Torrent{
+	err = t.Execute(&dRes, torrent{
 		ID:          torr.ID,
 		Name:        torr.Name,
 		Status:      status,
@@ -223,19 +223,19 @@ func sendTorrentList(sf showFilter) error {
 	defer ctx.Mutex.Unlock()
 	for _, i := range ctx.TorrentCache.Items {
 		switch sf {
-		case All:
+		case all:
 			err := sendTorrent(ctx.chatID, i)
 			if err != nil {
 				return err
 			}
-		case Active:
+		case active:
 			if i.Status != 0 && i.ErrorString == "" {
 				err := sendTorrent(ctx.chatID, i)
 				if err != nil {
 					return err
 				}
 			}
-		case NotActive:
+		case notActive:
 			if i.Status == 0 {
 				err := sendTorrent(ctx.chatID, i)
 				if err != nil {
@@ -268,7 +268,7 @@ func getTorrentDetails(hash string) (string, error) {
 		}
 
 		var dRes bytes.Buffer
-		err = t.Execute(&dRes, Torrent{
+		err = t.Execute(&dRes, torrent{
 			ID:             TORRENT.ID,
 			Peers:          len(*TORRENT.Peers),
 			Downloading:    TORRENT.Status == 4,
@@ -420,9 +420,9 @@ func addTorrentMagnet(operation string) error {
 		return nil
 	}
 
-	path := ctx.TrApi.Session.DownloadDir + strings.Split(operation, "-")[1]
+	path := ctx.TrAPI.Session.DownloadDir + strings.Split(operation, "-")[1]
 
-	res, err := ctx.TrApi.AddTorrent(transmission.AddTorrentArg{
+	res, err := ctx.TrAPI.AddTorrent(transmission.AddTorrentArg{
 		DownloadDir: path,
 		Filename:    MAGENT,
 		Paused:      false,
@@ -540,12 +540,12 @@ func removeTorrent(hash string, messageID int, what string) error {
 	whatS := strings.Split(what, "-")[1]
 	switch whatS {
 	case "yes":
-		err := ctx.TrApi.RemoveTorrents([]*transmission.Torrent{TORRENT}, false)
+		err := ctx.TrAPI.RemoveTorrents([]*transmission.Torrent{TORRENT}, false)
 		if err != nil {
 			return err
 		}
 	case "yes+data":
-		err := ctx.TrApi.RemoveTorrents([]*transmission.Torrent{TORRENT}, true)
+		err := ctx.TrAPI.RemoveTorrents([]*transmission.Torrent{TORRENT}, true)
 		if err != nil {
 			return err
 		}
@@ -594,22 +594,22 @@ func queueTorrent(hash string, messageID int, what string) error {
 	whatS := strings.Split(what, "-")[1]
 	switch whatS {
 	case "top":
-		err := ctx.TrApi.QueueMoveTop([]*transmission.Torrent{TORRENT})
+		err := ctx.TrAPI.QueueMoveTop([]*transmission.Torrent{TORRENT})
 		if err != nil {
 			return err
 		}
 	case "up":
-		err := ctx.TrApi.QueueMoveUp([]*transmission.Torrent{TORRENT})
+		err := ctx.TrAPI.QueueMoveUp([]*transmission.Torrent{TORRENT})
 		if err != nil {
 			return err
 		}
 	case "down":
-		err := ctx.TrApi.QueueMoveDown([]*transmission.Torrent{TORRENT})
+		err := ctx.TrAPI.QueueMoveDown([]*transmission.Torrent{TORRENT})
 		if err != nil {
 			return err
 		}
 	case "bottom":
-		err := ctx.TrApi.QueueMoveBottom([]*transmission.Torrent{TORRENT})
+		err := ctx.TrAPI.QueueMoveBottom([]*transmission.Torrent{TORRENT})
 		if err != nil {
 			return err
 		}
@@ -751,11 +751,11 @@ func addTorrentFile(operation string) error {
 		return nil
 	}
 
-	path := ctx.TrApi.Session.DownloadDir + strings.Split(operation, "-")[1]
+	path := ctx.TrAPI.Session.DownloadDir + strings.Split(operation, "-")[1]
 
 	base64Str := base64.StdEncoding.EncodeToString(TFILE)
 
-	res, err := ctx.TrApi.AddTorrent(transmission.AddTorrentArg{
+	res, err := ctx.TrAPI.AddTorrent(transmission.AddTorrentArg{
 		DownloadDir: path,
 		Metainfo:    base64Str,
 		Paused:      false,
@@ -783,7 +783,7 @@ func addTorrentFile(operation string) error {
 
 // TODO: on start it triggered
 func updateCache() {
-	tMap, err := ctx.TrApi.GetTorrentMap()
+	tMap, err := ctx.TrAPI.GetTorrentMap()
 	if err != nil {
 		panic(err)
 	}
