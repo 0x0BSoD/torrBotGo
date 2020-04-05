@@ -9,6 +9,7 @@ GO_FILES := $(shell find . -name '*.go' | grep -v /vendor/ | grep -v _test.go)
 all: build
 
 build: mod
+	@cp -r build_in build
 	@go build -i -o build/main $(PKG)
 
 mod:
@@ -21,4 +22,4 @@ vet:
 	@go vet ${PKG_LIST}
 
 clean:
-	@rm -f $(PROJECT_NAME)/build
+	@rm -rf ./build
