@@ -30,22 +30,22 @@ builds:
     goarch: 386
 
 archives:
-  replacements:
-    amd64: 64-bit
-    386: 32-bit
-    darwin: macOS
-    linux: Linux
+  - replacements:
+      amd64: 64-bit
+      386: 32-bit
+      darwin: macOS
+      linux: Linux
 
-  format_overrides:
-    - goos: windows
-      format: zip
+    format_overrides:
+      - goos: windows
+        format: zip
 
-  files:
-    - config_example.json
-    - error.mp4
-    - templates/*
-    - LICENSE
-    - README.MD
+    files:
+      - config_example.json
+      - error.mp4
+      - templates/*
+      - LICENSE
+      - README.MD
 
 checksum:
   name_template: 'checksums.txt'
