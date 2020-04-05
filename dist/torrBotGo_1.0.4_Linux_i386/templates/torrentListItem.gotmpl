@@ -1,0 +1,6 @@
+`{{ .Icon }} | {{ .Status }} | ID: {{ .ID }}`
+{{ .Name }}
+{{ if .ErrorString -}}
+`----`
+{{ .ErrorString }}
+{{ end }}
