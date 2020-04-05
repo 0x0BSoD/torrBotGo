@@ -19,7 +19,7 @@ import (
 
 func sendError(text string) {
 	if ctx.chatID == 0 {
-		fmt.Errorf("chatID empty, %s", text)
+		fmt.Printf("chatID empty, %s\n", text)
 		return
 	}
 

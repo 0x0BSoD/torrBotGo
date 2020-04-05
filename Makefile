@@ -1,4 +1,24 @@
-build:
-	go fmt *.go
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build  -x -ldflags="-w -s" -o transmissionBot
-	mv transmissionBot ./dist
+
+PROJECT_NAME := "transmission-bot"
+PKG := "github.com/0x0BSoD/$(PROJECT_NAME)"
+PKG_LIST := $(shell go list ${PKG}/... | grep -v /vendor/)
+GO_FILES := $(shell find . -name '*.go' | grep -v /vendor/ | grep -v _test.go)
+
+.PHONY: all mod lint vet build clean
+
+all: build
+
+build: mod
+	@go build -i -o build/main $(PKG)
+
+mod:
+	@go mod download
+
+lint:
+	@golint -set_exit_status ${PKG_LIST}
+
+vet:
+	@go vet ${PKG_LIST}
+
+clean:
+	@rm -f $(PROJECT_NAME)/build
