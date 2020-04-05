@@ -4,10 +4,12 @@
 before:
   hooks:
     - go mod download
+
 builds:
 - env:
   - GO111MODULE=on
   - CGO_ENABLED=0
+
 archives:
 - replacements:
     darwin: Darwin
@@ -15,8 +17,19 @@ archives:
     windows: Windows
     386: i386
     amd64: x86_64
+
+  format_overrides:
+    - goos: windows
+      format: zip
+      
+  files:
+    - build_in/main/*
+    - LICENSE.txt
+    - README.MD
+
 checksum:
   name_template: 'checksums.txt'
+
 changelog:
   sort: asc
   filters:
