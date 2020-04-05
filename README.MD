@@ -1,6 +1,8 @@
 # Transmission telegram bot
 
 ![Docker Automated build](https://img.shields.io/docker/automated/zlodey23/transmission-bot)
+![Build](https://github.com/0x0BSoD/torrBotGo/workflows/Build/badge.svg)
+![Release](https://github.com/0x0BSoD/torrBotGo/workflows/Release/badge.svg)
 
 Telegram bot as a transmission interface.
 
