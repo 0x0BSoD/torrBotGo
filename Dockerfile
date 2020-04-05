@@ -33,7 +33,7 @@ LABEL version="1.0"
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /app/transmission-bot /transmission-bot
 
-COPY dist/templates /templates
-COPY dist/error.mp4 /error.mp4
+COPY templates /templates
+COPY error.mp4 /error.mp4
 
 ENTRYPOINT ["/transmission-bot"]
