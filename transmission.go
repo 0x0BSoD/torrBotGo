@@ -325,7 +325,7 @@ func sendTorrentDetails(hash string, messageID int, md5SumOld string) error {
 }
 
 func sendTorrentDetailsByID(torrentID int64) error {
-	hash := ctx.TorrentCache.GetHash(int(torrentID))
+	hash := ctx.TorrentCache.getHash(int(torrentID))
 
 	t, err := getTorrentDetails(hash)
 
@@ -787,7 +787,7 @@ func updateCache() {
 	if err != nil {
 		panic(err)
 	}
-	changed := ctx.TorrentCache.Update(tMap)
+	changed := ctx.TorrentCache.update(tMap)
 
 	if len(changed) == 0 {
 		return

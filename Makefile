@@ -1,5 +1,5 @@
 
-PROJECT_NAME := "transmission-bot"
+PROJECT_NAME := "transmissionTG"
 PKG := "github.com/0x0BSoD/$(PROJECT_NAME)"
 PKG_LIST := $(shell go list ${PKG}/... | grep -v /vendor/)
 GO_FILES := $(shell find . -name '*.go' | grep -v /vendor/ | grep -v _test.go)
