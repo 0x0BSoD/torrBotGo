@@ -23,7 +23,9 @@ archives:
       format: zip
 
   files:
-    - build_in/main/**/*
+    - config_example.json
+    - error.mp4
+    - templates
     - LICENSE
     - README.MD
 
