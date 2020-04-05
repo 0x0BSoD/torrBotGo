@@ -69,17 +69,18 @@ func torrentDetailKbd(hash string, status int) tgbotapi.InlineKeyboardMarkup {
 				tgbotapi.NewInlineKeyboardButtonData("🔁", "update_"+hash),
 			),
 		)
-	} else {
-		return tgbotapi.NewInlineKeyboardMarkup(
-			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData("Priority", "priority_"+hash),
-				tgbotapi.NewInlineKeyboardButtonData("Files", "files_"+hash),
-				tgbotapi.NewInlineKeyboardButtonData("Stop", "stop_"+hash),
-				tgbotapi.NewInlineKeyboardButtonData("Delete", "delete_"+hash),
-				tgbotapi.NewInlineKeyboardButtonData("🔁", "update_"+hash),
-			),
-		)
 	}
+
+	return tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("Priority", "priority_"+hash),
+			tgbotapi.NewInlineKeyboardButtonData("Files", "files_"+hash),
+			tgbotapi.NewInlineKeyboardButtonData("Stop", "stop_"+hash),
+			tgbotapi.NewInlineKeyboardButtonData("Delete", "delete_"+hash),
+			tgbotapi.NewInlineKeyboardButtonData("🔁", "update_"+hash),
+		),
+	)
+
 }
 
 var configKbd = tgbotapi.NewInlineKeyboardMarkup(

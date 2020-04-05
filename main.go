@@ -11,13 +11,14 @@ import (
 	"github.com/0x0BSoD/transmission"
 )
 
+// GlobalContext - struct for keeping needed stuff, i dragged it through almost all functions
 type GlobalContext struct {
 	Bot          *tgbotapi.BotAPI
-	TrApi        *transmission.Client
+	TrAPI        *transmission.Client
 	Mutex        sync.Mutex
 	Debug        bool
 	Categories   map[string]string
-	TorrentCache Torrents
+	TorrentCache torrents
 	imgDir       string
 	chatID       int64
 }
@@ -44,7 +45,7 @@ func main() {
 	ctx.imgDir = cfg.ImgDir
 
 	conf := transmission.Config{
-		Address:  cfg.Transmission.Uri,
+		Address:  cfg.Transmission.URI,
 		User:     cfg.Transmission.User,
 		Password: cfg.Transmission.Password,
 	}
@@ -87,10 +88,10 @@ func main() {
 		fmt.Println("❌")
 		log.Panic(err)
 	}
-	ctx.TorrentCache = InitCache(tMap)
+	ctx.TorrentCache = initCache(tMap)
 	fmt.Println("✔️")
 
-	ctx.TrApi = t
+	ctx.TrAPI = t
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60

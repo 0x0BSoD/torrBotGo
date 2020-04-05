@@ -27,11 +27,11 @@ func handleMessage(upd tgbotapi.Update) {
 	} else {
 		switch upd.Message.Text {
 		case "All torrents":
-			err = sendTorrentList(All)
+			err = sendTorrentList(all)
 		case "Active torrents":
-			err = sendTorrentList(Active)
+			err = sendTorrentList(active)
 		case "Not Active torrents":
-			err = sendTorrentList(NotActive)
+			err = sendTorrentList(notActive)
 		default:
 			sendError("I don't know that command. handleMessage")
 		}
