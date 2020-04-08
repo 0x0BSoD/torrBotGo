@@ -90,6 +90,8 @@ type sessConfig struct {
 	SpeedLimitDEn bool
 	SpeedLimitU   string
 	SpeedLimitUEn bool
+	DownloadQEn   bool
+	DownloadQSize int
 }
 
 func sendConfig() (string, error) {
@@ -117,6 +119,8 @@ func sendConfig() (string, error) {
 		SpeedLimitDEn: sc.SpeedLimitDownEnabled,
 		SpeedLimitU:   glh.ConvertBytes(float64(sc.SpeedLimitUp), glh.Speed),
 		SpeedLimitUEn: sc.SpeedLimitUpEnabled,
+		DownloadQEn:   sc.DownloadQueueEnabled,
+		DownloadQSize: sc.DownloadQueueSize,
 	})
 	if err != nil {
 		return "", err
