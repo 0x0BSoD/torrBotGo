@@ -14,7 +14,8 @@ Telegram bot as a transmission interface.
  * Remove torrent
  * Message when torrent done
  * Can get image of the torrent from rutracker if used torrent file
-
+ * Search torrent by name with prefix *t:* i.e *t:Ubuntu* 
+ 
 Config:
 ```json
 {

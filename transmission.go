@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"text/template"
 	"time"
@@ -380,6 +381,30 @@ func sendTorrentFiles(hash string) error {
 	return nil
 }
 
+func searchTorrent(text string) error {
+
+	searchString := strings.Split(text, "t:")
+
+	fmt.Println(searchString)
+
+	if len(searchString) <= 1 {
+		return errors.New("search string empty")
+	}
+
+	re := regexp.MustCompile(searchString[1])
+
+	for _, t := range ctx.TorrentCache.Items {
+		if re.Match([]byte(t.Name)) {
+			err := sendTorrent(ctx.chatID, t)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 //======================================================================================================================
 // ACTIONS WITH TORRENT
 //======================================================================================================================
@@ -390,7 +415,7 @@ func addTorrentMagnetQuestion(text string, messageID int) error {
 	for _, i := range strings.Split(text, "&") {
 		decoded, err := url.QueryUnescape(i)
 		if err != nil {
-			panic(err)
+			return err
 		}
 
 		if strings.HasPrefix(decoded, "dn=") {

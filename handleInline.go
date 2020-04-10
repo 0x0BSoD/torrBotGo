@@ -8,7 +8,7 @@ import (
 )
 
 func handleInline(upd tgbotapi.Update) {
-	if upd.CallbackQuery.Data == "" {
+	if upd.CallbackQuery == nil || upd.CallbackQuery.Data == "" {
 		return
 	}
 
