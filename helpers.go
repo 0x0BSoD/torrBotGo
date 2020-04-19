@@ -53,9 +53,12 @@ func parseStatus(s int) (string, string) {
 	case 5:
 		icon = "▶️️"
 		status = "'Queued to seed"
-	default:
+	case 6:
 		icon = "▶️️"
 		status = "Seeding"
+	default:
+		icon = "♾️"
+		status = "Undef"
 	}
 
 	return icon, status
