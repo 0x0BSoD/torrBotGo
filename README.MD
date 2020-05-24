@@ -47,3 +47,16 @@ Create the config.json described above and run:
 ```
 docker run -v "$PWD/path/to/config.json":/config.json zlodey23/transmission-bot  
 ```
+
+## Ansible
+
+Ansible role with this bot:
+https://github.com/0x0BSoD/ansible/tree/master/transmission
+
+Check the vars/main.yml and defaults/main.yml dirs.
+Default vars:
+```yml
+user: root
+rpc_user: user
+rpc_password: pass123
+```
