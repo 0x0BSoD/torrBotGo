@@ -1,6 +1,8 @@
 package main
 
-import "github.com/0x0BSoD/transmission"
+import (
+	"github.com/0x0BSoD/transmission"
+)
 
 type torrents struct {
 	Items     transmission.TorrentMap

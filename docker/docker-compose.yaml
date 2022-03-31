@@ -1,0 +1,32 @@
+---
+version: '2'
+networks:
+  tr_net:
+    name: transmission
+    driver: bridge
+
+services:
+  transmission:
+    container_name: transmission
+    hostname: transmission
+    image: 0x0bsod/transmission
+    ports:
+      - 9091:9091
+    command: "--log-debug -g /opt/transmission/transmission-daemon -c /opt/transmission/transmission-daemon"
+    volumes:
+    - ./transmission/config:/opt/transmission/transmission-daemon
+    - ./torrbot/download:/mnt/Downloads
+    networks:
+      - tr_net
+
+  torrbot:
+    container_name: torrbot
+    hostname: torrbot
+    image: 0x0bsod/torrbotgo
+    depends_on:
+      - transmission
+    command: "-config /opt/torrbot/config.json"
+    volumes:
+      - ./torrbot/config_docker.json:/opt/torrbot/config.json
+    networks:
+      - tr_net

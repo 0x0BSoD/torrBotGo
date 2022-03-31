@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	glh "github.com/0x0BSoD/goLittleHelpers"
 	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
 	"github.com/0x0BSoD/transmission"
 )
@@ -34,10 +35,11 @@ func main() {
 	flag.Parse()
 
 	cfg := marshalConf(path)
+
 	ctx.Debug = cfg.Debug
 	b, err := tgbotapi.NewBotAPI(cfg.Token)
 	if err != nil {
-		log.Panic(err)
+		log.Fatalf("can't start session with telegram: %s", err)
 	}
 	b.Debug = cfg.Debug
 	ctx.Bot = b
@@ -50,13 +52,16 @@ func main() {
 		Password: cfg.Transmission.Password,
 	}
 
+	if ctx.Debug {
+		_ = glh.PrettyPrint(cfg)
+	}
+
 	fmt.Print("Connecting to transmission API ")
 	t, err := transmission.New(conf)
 	if err != nil {
 		fmt.Println("❌")
-		log.Panic(err)
+		log.Fatalf(">> can't create transmission session: %s", err)
 	}
-	fmt.Println("✔️")
 	defer func() {
 		fmt.Print("Closing transmission session ")
 		err := t.Session.Close()
@@ -67,18 +72,21 @@ func main() {
 		fmt.Println("✔️")
 	}()
 
-	if cfg.DefaultDownloadDir != "" {
-		err := t.Session.Set(transmission.SetSessionArgs{DownloadDir: cfg.DefaultDownloadDir})
+	if (transmission.SetSessionArgs{}) != cfg.CustomTransmissionArgs {
+		fmt.Print("Setting custom transmission parameters ")
+		err := t.Session.Set(cfg.CustomTransmissionArgs)
 		if err != nil {
-			log.Panic(err)
+			fmt.Println("❌")
+			log.Fatalf(">> starting transmission session failed: %s", err)
 		}
 	}
+	fmt.Println("✔️")
 
 	fmt.Print("Updating transmission session info ")
 	err = t.Session.Update()
 	if err != nil {
 		fmt.Println("❌")
-		log.Panic(err)
+		log.Fatalf(">> updating transmission session info failed: %s", err)
 	}
 	fmt.Println("✔️")
 
@@ -86,7 +94,7 @@ func main() {
 	tMap, err := t.GetTorrentMap()
 	if err != nil {
 		fmt.Println("❌")
-		log.Panic(err)
+		log.Fatalf(">> get torrent map failed: %s", err)
 	}
 	ctx.TorrentCache = initCache(tMap)
 	fmt.Println("✔️")
@@ -100,7 +108,7 @@ func main() {
 	updates, err := ctx.Bot.GetUpdatesChan(u)
 	if err != nil {
 		fmt.Println("❌")
-		log.Panic(err)
+		log.Fatalf(">> getting tg updates failed: %s", err)
 	}
 	fmt.Println("✔️")
 

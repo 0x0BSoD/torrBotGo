@@ -1,0 +1,22 @@
+{
+  "token": "432397698:AAGTwWtdkaeP_DJouiOQE70AaqH2Qv6tPM0",
+  "debug": false,
+  "transmission": {
+    "uri": "http://transmission:9091/transmission/rpc",
+    "user": "admin",
+    "password": "admin"
+  },
+  "img_dir": "/tmp",
+  "transmission_args": {
+    "download-dir": "/mnt/Downloads",
+    "incomplete-dir": "/mnt/Download/in_progress",
+    "incomplete-dir-enabled": true
+  },
+  "categories": {
+    "Films": "/Films",
+    "TVSeries": "/tv",
+    "TVAnime": "/TVAnime",
+    "Soft": "/Soft",
+    "Education": "/Education"
+  }
+}

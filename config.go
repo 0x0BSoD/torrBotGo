@@ -6,15 +6,17 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+
+	"github.com/0x0BSoD/transmission"
 )
 
 type config struct {
-	Token              string            `json:"token"`
-	Debug              bool              `json:"debug"`
-	Transmission       trConfig          `json:"transmission"`
-	DefaultDownloadDir string            `json:"default_download_dir"`
-	Categories         map[string]string `json:"categories"`
-	ImgDir             string            `json:"img_dir"`
+	Token                  string                      `json:"token"`
+	Debug                  bool                        `json:"debug"`
+	Transmission           trConfig                    `json:"transmission"`
+	CustomTransmissionArgs transmission.SetSessionArgs `json:"transmission_args"`
+	Categories             map[string]string           `json:"categories"`
+	ImgDir                 string                      `json:"img_dir"`
 }
 
 type trConfig struct {

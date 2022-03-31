@@ -62,6 +62,8 @@ func sendStatus() (string, error) {
 		_ = glh.PrettyPrint(stats)
 	}
 
+	fmt.Println(">>>", ctx.TrAPI.Session.DownloadDir)
+
 	freeSpaceData, err := ctx.TrAPI.FreeSpace(ctx.TrAPI.Session.DownloadDir)
 	if err != nil {
 		return "", err

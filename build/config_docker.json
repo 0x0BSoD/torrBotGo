@@ -1,0 +1,19 @@
+{
+  "token": "432397698:AAGTwWtdkaeP_DJouiOQE70AaqH2Qv6tPM0",
+  "debug": true,
+  "transmission": {
+    "uri": "http://127.0.0.1:9091/transmission/rpc",
+    "user": "admin",
+    "password": "admin"
+  },
+  "img_dir": "/tmp",
+  "default_download_dir": "/home/alex/Downloads/torr",
+  "categories": {
+    "Films": "/Films",
+    "TVSeries": "/tv",
+    "TVAnime": "/TVAnime",
+    "Soft": "/Soft",
+    "Education": "/Education"
+  }
+}
+
