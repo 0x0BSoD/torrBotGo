@@ -24,8 +24,8 @@ import (
 // TORRENT - selected torrent
 var TORRENT *transmission.Torrent
 
-// MAGENT - magent link
-var MAGENT string
+// MAGNET - magnet link
+var MAGNET string
 
 // TFILE - downloaded torrent file
 var TFILE []byte
@@ -53,7 +53,7 @@ func sendStatus() (string, error) {
 		return "", err
 	}
 
-	t, err := template.ParseFiles("templates/status.gotmpl")
+	t, err := template.ParseFiles(ctx.wd + "templates/status.gotmpl")
 	if err != nil {
 		return "", err
 	}
@@ -66,7 +66,7 @@ func sendStatus() (string, error) {
 
 	freeSpaceData, err := ctx.TrAPI.FreeSpace(ctx.TrAPI.Session.DownloadDir)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error with %s: %s", ctx.TrAPI.Session.DownloadDir, err)
 	}
 
 	var dRes bytes.Buffer
@@ -105,7 +105,7 @@ func sendConfig() (string, error) {
 
 	sc := ctx.TrAPI.Session
 
-	t, err := template.ParseFiles("templates/config.gotmpl")
+	t, err := template.ParseFiles(ctx.wd + "templates/config.gotmpl")
 	if err != nil {
 		return "", err
 	}
@@ -190,7 +190,7 @@ const (
 //======================================================================================================================
 
 func sendTorrent(id int64, torr *transmission.Torrent) error {
-	t, err := template.ParseFiles("templates/torrentListItem.gotmpl")
+	t, err := template.ParseFiles(ctx.wd + "templates/torrentListItem.gotmpl")
 	if err != nil {
 		return err
 	}
@@ -269,7 +269,7 @@ func getTorrentDetails(hash string) (string, error) {
 			icon = "🔥️"
 		}
 
-		t, err := template.ParseFiles("templates/torrent.gotmpl")
+		t, err := template.ParseFiles(ctx.wd + "templates/torrent.gotmpl")
 		if err != nil {
 			log.Panic(err)
 		}
@@ -357,7 +357,7 @@ func sendTorrentFiles(hash string) error {
 		msg := tgbotapi.NewMessage(ctx.chatID, "")
 		msg.ParseMode = "MarkdownV2"
 
-		t, err := template.ParseFiles("templates/torrentFileItem.gotmpl")
+		t, err := template.ParseFiles(ctx.wd + "templates/torrentFileItem.gotmpl")
 		if err != nil {
 			log.Panic(err)
 		}
@@ -436,7 +436,7 @@ func addTorrentMagnetQuestion(text string, messageID int) error {
 		return err
 	}
 
-	MAGENT = text
+	MAGNET = text
 	MESSAGEID = messageID
 
 	return nil
@@ -455,7 +455,7 @@ func addTorrentMagnet(operation string) error {
 
 	res, err := ctx.TrAPI.AddTorrent(transmission.AddTorrentArg{
 		DownloadDir: path,
-		Filename:    MAGENT,
+		Filename:    MAGNET,
 		Paused:      false,
 	})
 	if err != nil {

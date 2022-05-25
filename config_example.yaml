@@ -1,0 +1,20 @@
+app:
+  debug: true
+  img_dir: "/tmp"
+  working_dir: "/app/torrBotGo/"
+  error_media: "media/error.mp4"
+  dirs:
+    default_download_dir: "/tmp/Download/"
+    categories:
+      Films: "films"
+      TVSeries: "tv_series"
+      Anime: "anime"
+      Soft: "soft"
+      Education: "education"
+telegram:
+  token: "%TOKEN%"
+transmission:
+  config:
+    uri: "http://localhost:9091/transmission/rpc"
+    user: "admin"
+    password: "admin"

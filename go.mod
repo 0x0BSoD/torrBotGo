@@ -8,6 +8,7 @@ require (
 	github.com/0x0BSoD/transmission v0.0.0-20220328144506-74e58d93e1fe
 	github.com/PuerkitoBio/goquery v1.8.0
 	github.com/jackpal/bencode-go v1.0.0
+	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (

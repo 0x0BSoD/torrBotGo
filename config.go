@@ -1,22 +1,32 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/0x0BSoD/transmission"
+	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 	"strings"
-
-	"github.com/0x0BSoD/transmission"
 )
 
 type config struct {
-	Token                  string                      `json:"token"`
-	Debug                  bool                        `json:"debug"`
-	Transmission           trConfig                    `json:"transmission"`
-	CustomTransmissionArgs transmission.SetSessionArgs `json:"transmission_args"`
-	Categories             map[string]string           `json:"categories"`
-	ImgDir                 string                      `json:"img_dir"`
+	App struct {
+		Debug      bool   `yaml:"debug"`
+		ImgDir     string `yaml:"img_dir"`
+		WorkingDir string `yaml:"working_dir"`
+		ErrorMedia string `yaml:"error_media"`
+		Dirs       struct {
+			DefaultDownloadDir string            `yaml:"default_download_dir"`
+			Categories         map[string]string `yaml:"categories"`
+		} `yaml:"dirs"`
+	} `yaml:"app"`
+	Telegram struct {
+		Token string `yaml:"token"`
+	} `yaml:"telegram"`
+	Transmission struct {
+		Config trConfig                    `yaml:"config"`
+		Custom transmission.SetSessionArgs `yaml:"custom"`
+	} `yaml:"transmission"`
 }
 
 type trConfig struct {
@@ -39,22 +49,47 @@ func marshalConf(path string) config {
 	}
 
 	var result config
-	err = json.Unmarshal(b, &result)
-	if err != nil {
+	if err = yaml.Unmarshal(b, &result); err != nil {
 		fmt.Printf("can't parse file '%s', %s", path, err.Error())
 		os.Exit(-1)
 	}
 
-	if _, err := os.Stat(result.ImgDir); os.IsNotExist(err) {
-		err = os.MkdirAll(result.ImgDir, 0755)
+	if _, err := os.Stat(result.App.ImgDir); os.IsNotExist(err) {
+		fmt.Printf("❌ %s not exist \n", result.App.ImgDir)
+		err = os.MkdirAll(result.App.ImgDir, 0755)
 		if err != nil {
-			fmt.Printf("can't create ImgDir directory '%s', %s", result.ImgDir, err.Error())
+			fmt.Printf("can't create ImgDir directory '%s', %s", result.App.ImgDir, err.Error())
 			os.Exit(-1)
 		}
 	}
 
-	if !strings.HasSuffix(result.ImgDir, "/") {
-		result.ImgDir += "/"
+	if _, err := os.Stat(result.App.Dirs.DefaultDownloadDir); os.IsNotExist(err) {
+		fmt.Printf("❌ %s not exist \n", result.App.Dirs.DefaultDownloadDir)
+		err = os.MkdirAll(result.App.ImgDir, 0755)
+		if err != nil {
+			fmt.Printf("can't create DefaultDownloadDir directory '%s', %s", result.App.ImgDir, err.Error())
+			os.Exit(-1)
+		}
+	}
+
+	for _, d := range result.App.Dirs.Categories {
+		if _, err := os.Stat(result.App.Dirs.DefaultDownloadDir + d); os.IsNotExist(err) {
+			fmt.Printf("❌ %s not exist \n", result.App.Dirs.DefaultDownloadDir+d)
+			err = os.MkdirAll(result.App.Dirs.DefaultDownloadDir+d, 0755)
+			if err != nil {
+				fmt.Printf("can't create %s directory '%s', %s", d, result.App.ImgDir, err.Error())
+				os.Exit(-1)
+			}
+		}
+	}
+
+	if !strings.HasSuffix(result.App.ImgDir, "/") {
+		result.App.ImgDir += "/"
+	}
+
+	if _, err := os.Stat(result.App.WorkingDir); os.IsNotExist(err) {
+		fmt.Printf("wrong WorkingDir directory '%s', %s", result.App.ImgDir, err.Error())
+		os.Exit(-1)
 	}
 
 	return result

@@ -12,7 +12,7 @@ import (
 	"github.com/0x0BSoD/transmission"
 )
 
-// GlobalContext - struct for keeping needed stuff, i dragged it through almost all functions
+// GlobalContext - struct for keeping needed stuff, I dragged it through almost all functions
 type GlobalContext struct {
 	Bot          *tgbotapi.BotAPI
 	TrAPI        *transmission.Client
@@ -21,7 +21,9 @@ type GlobalContext struct {
 	Categories   map[string]string
 	TorrentCache torrents
 	imgDir       string
+	errMedia     string
 	chatID       int64
+	wd           string
 }
 
 var path string
@@ -29,33 +31,42 @@ var ctx GlobalContext
 
 func init() {
 	flag.StringVar(&path, "config", "./config.json", "path to config file, JSON")
+	flag.StringVar(&path, "c", "./config.json", "path to config file, JSON")
+
 }
 
 func main() {
+
+	// Config part =======
 	flag.Parse()
 
 	cfg := marshalConf(path)
 
-	ctx.Debug = cfg.Debug
-	b, err := tgbotapi.NewBotAPI(cfg.Token)
+	ctx.Debug = cfg.App.Debug
+
+	b, err := tgbotapi.NewBotAPI(cfg.Telegram.Token)
 	if err != nil {
 		log.Fatalf("can't start session with telegram: %s", err)
 	}
-	b.Debug = cfg.Debug
+	b.Debug = cfg.App.Debug
+
 	ctx.Bot = b
-	ctx.Categories = cfg.Categories
-	ctx.imgDir = cfg.ImgDir
+	ctx.Categories = cfg.App.Dirs.Categories
+	ctx.wd = cfg.App.WorkingDir
+	ctx.imgDir = cfg.App.ImgDir
+	ctx.errMedia = cfg.App.ErrorMedia
 
 	conf := transmission.Config{
-		Address:  cfg.Transmission.URI,
-		User:     cfg.Transmission.User,
-		Password: cfg.Transmission.Password,
+		Address:  cfg.Transmission.Config.URI,
+		User:     cfg.Transmission.Config.User,
+		Password: cfg.Transmission.Config.Password,
 	}
 
 	if ctx.Debug {
 		_ = glh.PrettyPrint(cfg)
 	}
 
+	// App run part ====
 	fmt.Print("Connecting to transmission API ")
 	t, err := transmission.New(conf)
 	if err != nil {
@@ -72,9 +83,9 @@ func main() {
 		fmt.Println("✔️")
 	}()
 
-	if (transmission.SetSessionArgs{}) != cfg.CustomTransmissionArgs {
+	if (transmission.SetSessionArgs{}) != cfg.Transmission.Custom {
 		fmt.Print("Setting custom transmission parameters ")
-		err := t.Session.Set(cfg.CustomTransmissionArgs)
+		err := t.Session.Set(cfg.Transmission.Custom)
 		if err != nil {
 			fmt.Println("❌")
 			log.Fatalf(">> starting transmission session failed: %s", err)

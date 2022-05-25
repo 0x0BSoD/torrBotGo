@@ -31,9 +31,11 @@ LABEL maintainer="https://github.com/0x0BSoD"
 LABEL version="1.0"
 
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
-COPY --from=builder /app/transmission-bot /transmission-bot
+COPY --from=builder /app/transmission-bot /app/transmission-bot
 
-COPY templates /templates
-COPY error.mp4 /error.mp4
+COPY ./files/templates /app/templates
+COPY ./files/media/error.mp4 /app/media/error.mp4
 
-ENTRYPOINT ["/transmission-bot"]
+ENTRYPOINT ["/app/transmission-bot"]
+
+CMD ["-h"]

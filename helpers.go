@@ -23,7 +23,7 @@ func sendError(text string) {
 		return
 	}
 
-	msg := tgbotapi.NewVideoUpload(ctx.chatID, "error.mp4")
+	msg := tgbotapi.NewVideoUpload(ctx.chatID, ctx.wd+ctx.errMedia)
 	msg.Caption = text
 	if _, err := ctx.Bot.Send(msg); err != nil {
 		log.Panic(err)
