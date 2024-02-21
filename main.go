@@ -30,8 +30,8 @@ var path string
 var ctx GlobalContext
 
 func init() {
-	flag.StringVar(&path, "config", "./config.json", "path to config file, JSON")
-	flag.StringVar(&path, "c", "./config.json", "path to config file, JSON")
+	flag.StringVar(&path, "config", "./config.yaml", "path to config file, YAML")
+	flag.StringVar(&path, "c", "./config.yaml", "path to config file, YAML")
 
 }
 
