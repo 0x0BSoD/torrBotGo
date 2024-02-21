@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/0x0BSoD/transmission"
 	"gopkg.in/yaml.v2"
-	"io/ioutil"
+	"io"
 	"os"
 	"strings"
 )
@@ -30,9 +30,9 @@ type config struct {
 }
 
 type trConfig struct {
-	URI      string `json:"uri"`
-	User     string `json:"user"`
-	Password string `json:"password"`
+	URI      string `yaml:"uri"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
 }
 
 func marshalConf(path string) config {
@@ -42,7 +42,7 @@ func marshalConf(path string) config {
 		os.Exit(-1)
 	}
 
-	b, err := ioutil.ReadAll(f)
+	b, err := io.ReadAll(f)
 	if err != nil {
 		fmt.Printf("can't read file '%s', %s", path, err.Error())
 		os.Exit(-1)

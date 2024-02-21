@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -498,6 +498,9 @@ func stopTorrent(hash string, messageID int, md5SumOld string) error {
 	updateCache()
 
 	t, err := getTorrentDetails(hash)
+	if err != nil {
+		return err
+	}
 
 	tHash := strings.ReplaceAll(strings.ReplaceAll(t, "`", ""), "\n", "")
 
@@ -689,7 +692,7 @@ func addTorrentFileQuestion(fileID string, messageID int) error {
 	}
 	defer resp.Body.Close()
 
-	TFILE, err = ioutil.ReadAll(resp.Body)
+	TFILE, err = io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
