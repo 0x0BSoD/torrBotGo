@@ -817,7 +817,7 @@ func addTorrentFile(operation string) error {
 
 // TODO: on start it triggered
 func updateCache() {
-	tMap, err := ctx.TrAPI.GetTorrentMap()
+	tMap, err := ctx.TrAPI.GetTorrentMap(ctx.TrAPI.Context)
 	if err != nil {
 		panic(err)
 	}

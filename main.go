@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -36,7 +37,6 @@ func init() {
 }
 
 func main() {
-
 	// Config part =======
 	flag.Parse()
 
@@ -69,6 +69,7 @@ func main() {
 	// App run part ====
 	fmt.Print("Connecting to transmission API ")
 	t, err := transmission.New(conf)
+	t.Context = context.TODO()
 	if err != nil {
 		fmt.Println("❌")
 		log.Fatalf(">> can't create transmission session: %s", err)
@@ -102,7 +103,7 @@ func main() {
 	fmt.Println("✔️")
 
 	fmt.Print("Setting torrents cache ")
-	tMap, err := t.GetTorrentMap()
+	tMap, err := t.GetTorrentMap(t.Context)
 	if err != nil {
 		fmt.Println("❌")
 		log.Fatalf(">> get torrent map failed: %s", err)

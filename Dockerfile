@@ -1,4 +1,4 @@
-FROM golang:alpine3.19 AS builder
+FROM golang:1.23.5 AS builder
 
 ENV SRC_DIR=/go/src/github.com/0x0BSoD/transmission-bot/
 ENV GO111MODULE=on
@@ -9,12 +9,10 @@ WORKDIR $SRC_DIR
 
 # Dependencies
 COPY go.mod go.sum ./
-RUN mkdir /app &&  \
-    apk add git gcc && \
-    go mod download
-
-# Update CA
-RUN apk --update add ca-certificates
+RUN mkdir /app && \
+  go mod download && \
+  apt-get update && \
+  apt-get install -y ca-certificates
 
 # Copy the code from the host and compile it
 ADD . ./
@@ -24,7 +22,7 @@ RUN  go build -x -a -installsuffix nocgo -o transmission-bot && \
      cp transmission-bot /app/transmission-bot
 
 # run
-FROM alpine:3.19.1 AS release
+FROM alpine:3.21 AS release
 
 LABEL name="Transmission interface for telegram"
 LABEL maintainer="https://github.com/0x0BSoD"
