@@ -335,7 +335,6 @@ func sendTorrentDetailsByID(torrentID int64) error {
 	hash := ctx.TorrentCache.getHash(int(torrentID))
 
 	t, err := getTorrentDetails(hash)
-
 	if err != nil {
 		return err
 	}
@@ -384,7 +383,6 @@ func sendTorrentFiles(hash string) error {
 }
 
 func searchTorrent(text string) error {
-
 	searchString := strings.Split(text, "t:")
 
 	fmt.Println(searchString)
@@ -775,7 +773,6 @@ func addTorrentFileQuestion(fileID string, messageID int) error {
 }
 
 func addTorrentFile(operation string) error {
-
 	if operation == "file+add-no" {
 		TFILE = nil
 		err := sendNewMessage(ctx.chatID, "Okay", nil)
@@ -817,7 +814,7 @@ func addTorrentFile(operation string) error {
 
 // TODO: on start it triggered
 func updateCache() {
-	tMap, err := ctx.TrAPI.GetTorrentMap(ctx.TrAPI.Context)
+	tMap, err := ctx.TrAPI.GetTorrentMap()
 	if err != nil {
 		panic(err)
 	}
@@ -829,7 +826,11 @@ func updateCache() {
 
 	for _, i := range changed {
 		if i.ErrorString != "" {
-			err := sendNewMessage(ctx.chatID, fmt.Sprintf("🔥️ Failed\n%s\nError:\n%s", i.Name, i.ErrorString), nil)
+			err := sendNewMessage(
+				ctx.chatID,
+				fmt.Sprintf("🔥️ Failed\n%s\nError:\n%s", i.Name, i.ErrorString),
+				nil,
+			)
 			if err != nil {
 				panic(err)
 			}

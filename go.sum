@@ -6,6 +6,8 @@ github.com/0x0BSoD/transmission v0.0.0-20220328150023-a18c2429f141 h1:7ohZ+x9rab
 github.com/0x0BSoD/transmission v0.0.0-20220328150023-a18c2429f141/go.mod h1:LdOPYjbU3LX1eDswtrtr6y4Ghny9V/AjZfkTfLcz6kI=
 github.com/0x0BSoD/transmission v0.0.0-20250123183304-2f02482d7d04 h1:iVLwN0q/kfNvTWltWHrNQKdxFoSmYo9qbyWx0vrSBRo=
 github.com/0x0BSoD/transmission v0.0.0-20250123183304-2f02482d7d04/go.mod h1:LdOPYjbU3LX1eDswtrtr6y4Ghny9V/AjZfkTfLcz6kI=
+github.com/0x0BSoD/transmission v0.0.0-20250206163554-a2e0401b8ba3 h1:ZNJI9YdQqP4seePBJlFD0mivTBsl5d3s/jlm3kMVbOc=
+github.com/0x0BSoD/transmission v0.0.0-20250206163554-a2e0401b8ba3/go.mod h1:2bM+e/ME4ph+DKUoJPST+TRfeGU3ZrriZYpva8XSRps=
 github.com/PuerkitoBio/goquery v1.10.1 h1:Y8JGYUkXWTGRB6Ars3+j3kN0xg1YqqlwvdTV8WTFQcU=
 github.com/PuerkitoBio/goquery v1.10.1/go.mod h1:IYiHrOMps66ag56LEH7QYDDupKXyo5A8qrjIx3ZtujY=
 github.com/andybalholm/cascadia v1.3.3 h1:AG2YHrzJIm4BZ19iwJ/DAua6Btl3IwJX+VI4kktS1LM=

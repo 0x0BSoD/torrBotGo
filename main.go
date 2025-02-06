@@ -27,13 +27,14 @@ type GlobalContext struct {
 	wd           string
 }
 
-var path string
-var ctx GlobalContext
+var (
+	path string
+	ctx  GlobalContext
+)
 
 func init() {
 	flag.StringVar(&path, "config", "./config.yaml", "path to config file, YAML")
 	flag.StringVar(&path, "c", "./config.yaml", "path to config file, YAML")
-
 }
 
 func main() {
@@ -103,7 +104,7 @@ func main() {
 	fmt.Println("✔️")
 
 	fmt.Print("Setting torrents cache ")
-	tMap, err := t.GetTorrentMap(t.Context)
+	tMap, err := t.GetTorrentMap()
 	if err != nil {
 		fmt.Println("❌")
 		log.Fatalf(">> get torrent map failed: %s", err)
