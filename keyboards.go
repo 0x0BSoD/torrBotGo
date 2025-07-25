@@ -38,7 +38,7 @@ func torrentDeleteKbd(hash string) tgbotapi.InlineKeyboardMarkup {
 	return tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("Yes", "delete-yes_"+hash),
-			tgbotapi.NewInlineKeyboardButtonData("Yes(with data)", "delete-yes+data"+hash),
+			tgbotapi.NewInlineKeyboardButtonData("Yes(with data)", "delete-yes+data_"+hash),
 			tgbotapi.NewInlineKeyboardButtonData("Cancel", "delete-no_"+hash),
 		),
 	)
@@ -49,8 +49,8 @@ func torrentQueueKbd(hash string) tgbotapi.InlineKeyboardMarkup {
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("⏫", "prior-top_"+hash),
 			tgbotapi.NewInlineKeyboardButtonData("🔼", "prior-up_"+hash),
-			tgbotapi.NewInlineKeyboardButtonData("🔽", "prior-down"+hash),
-			tgbotapi.NewInlineKeyboardButtonData("⏬", "prior-bottom"+hash),
+			tgbotapi.NewInlineKeyboardButtonData("🔽", "prior-down_"+hash),
+			tgbotapi.NewInlineKeyboardButtonData("⏬", "prior-bottom_"+hash),
 		),
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("Cancel", "prior-no_"+hash),
