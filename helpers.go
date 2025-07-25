@@ -52,7 +52,7 @@ func parseStatus(s int) (string, string) {
 		status = "Downloading"
 	case 5:
 		icon = "▶️️"
-		status = "'Queued to seed"
+		status = "Queued to seed"
 	case 6:
 		icon = "▶️️"
 		status = "Seeding"
