@@ -7,15 +7,15 @@ import (
 	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
 )
 
-func handleMessage(upd tgbotapi.Update) {
+func (c *Client) handleMessage(upd tgbotapi.Update) {
 	var err error
 
-	ctx.chatID = upd.Message.Chat.ID
+	c.chatID = upd.Message.Chat.ID
 
 	if torrentID, err := strconv.ParseInt(upd.Message.Text, 10, 64); err == nil {
 		err = sendTorrentDetailsByID(torrentID)
 		if err != nil {
-			sendError(err.Error())
+			c.sendError(err.Error())
 		}
 		return
 	}
@@ -35,11 +35,11 @@ func handleMessage(upd tgbotapi.Update) {
 		case "Not Active torrents":
 			err = sendTorrentList(notActive)
 		default:
-			sendError("I don't know that command. handleMessage")
+			c.sendError("I don't know that command. handleMessage")
 		}
 	}
 
 	if err != nil {
-		sendError(err.Error())
+		c.sendError(err.Error())
 	}
 }

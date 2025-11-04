@@ -1,15 +1,14 @@
-// Package ctx - GlobalContext struct for keeping needed stuff, I dragged it through almost all functions
 package ctx
 
 import (
 	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
-	"github.com/0x0BSoD/transmission"
+	tr "github.com/0x0BSoD/transmission"
 	"go.uber.org/zap"
 
 	"github.com/0x0BSoD/torrBotGo/internal/cache"
 )
 
-type Telegram struct {
+type telegram struct {
 	Client     *tgbotapi.BotAPI
 	Categories map[string]string
 	ImgDir     string
@@ -17,9 +16,13 @@ type Telegram struct {
 	ChatID     int64
 }
 
+type transmission struct {
+	Client *tr.Client
+}
+
 type GlobalContext struct {
-	Telegram     Telegram
-	TrAPI        *transmission.Client
+	Telegram     telegram
+	Transmission transmission
 	Debug        bool
 	TorrentCache cache.Torrents
 	Cwd          string

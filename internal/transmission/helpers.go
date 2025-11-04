@@ -16,7 +16,7 @@ func (c *Client) StartCacheUpdater(ctx context.Context, interval time.Duration) 
 	defer t.Stop()
 
 	if err := c.updateCache(ctx); err != nil {
-		c.globalContext.Logger.Sugar().Warnf("StartCacheUpdater: %v", err)
+		c.log.Sugar().Warnf("StartCacheUpdater: %v", err)
 	}
 
 	for {
@@ -25,19 +25,19 @@ func (c *Client) StartCacheUpdater(ctx context.Context, interval time.Duration) 
 			return
 		case <-t.C:
 			if err := c.updateCache(ctx); err != nil {
-				c.globalContext.Logger.Sugar().Warnf("StartCacheUpdater: %v", err)
+				c.log.Sugar().Warnf("StartCacheUpdater: %v", err)
 			}
 		}
 	}
 }
 
 func (c *Client) updateCache(ctx context.Context) error {
-	tMap, err := c.globalContext.TrAPI.GetTorrentMap()
+	tMap, err := c.transmission.GetTorrentMap()
 	if err != nil {
 		return fmt.Errorf("updateCache: fetch: %w", err)
 	}
 
-	changed := c.globalContext.TorrentCache.Update(tMap)
+	changed := c.cache.Update(tMap)
 	if len(changed) == 0 {
 		return nil
 	}
@@ -65,8 +65,8 @@ func (c *Client) updateCache(ctx context.Context) error {
 			return ctx.Err()
 		default:
 		}
-		if err := sendNewMessage(c.globalContext.ChatID, m, nil); err != nil {
-			c.globalContext.Logger.Sugar().Warnf("UpdateCache: send failed: %v", err)
+		if err := sendNewMessage(c.chatID, m, nil); err != nil {
+			c.log.Sugar().Warnf("UpdateCache: send failed: %v", err)
 		}
 	}
 

@@ -47,6 +47,16 @@ func (c *Torrents) GetByID(id int) (*transmission.Torrent, bool) {
 	return t, ok
 }
 
+func (c *Torrents) GetByHash(hash string) (*transmission.Torrent, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	t, ok := c.items[hash]
+	if !ok {
+		return nil, false
+	}
+	return t, true
+}
+
 // Update — update cache and return torrent with changed Status.
 func (c *Torrents) Update(next transmission.TorrentMap) []*transmission.Torrent {
 	c.mu.Lock()

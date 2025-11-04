@@ -17,15 +17,15 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-func sendError(text string) {
-	if ctx.chatID == 0 {
+func (c *Client) sendError(text string) {
+	if c.chatID == 0 {
 		fmt.Printf("chatID empty, %s\n", text)
 		return
 	}
 
-	msg := tgbotapi.NewVideoUpload(ctx.chatID, ctx.wd+ctx.errMedia)
+	msg := tgbotapi.NewVideoUpload(c.chatID, ctx.wd+ctx.errMedia)
 	msg.Caption = text
-	if _, err := ctx.Bot.Send(msg); err != nil {
+	if _, err := c.BotAPI.Send(msg); err != nil {
 		log.Panic(err)
 	}
 }
@@ -64,8 +64,8 @@ func parseStatus(s int) (string, string) {
 	return icon, status
 }
 
-func sendNewMessage(chatID int64, text string, replyMarkup *tgbotapi.InlineKeyboardMarkup) error {
-	if ctx.chatID == 0 {
+func (c *Client) sendNewMessage(chatID int64, text string, replyMarkup *tgbotapi.InlineKeyboardMarkup) error {
+	if c.chatID == 0 {
 		return errors.New("chatID empty")
 	}
 
@@ -80,14 +80,14 @@ func sendNewMessage(chatID int64, text string, replyMarkup *tgbotapi.InlineKeybo
 		msg.ReplyMarkup = replyMarkup
 	}
 
-	if _, err := ctx.Bot.Send(msg); err != nil {
+	if _, err := c.BotAPI.Send(msg); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func sendEditedMessage(chatID int64, messageID int, text string, replyMarkup *tgbotapi.InlineKeyboardMarkup) error {
+func (c *Client) sendEditedMessage(chatID int64, messageID int, text string, replyMarkup *tgbotapi.InlineKeyboardMarkup) error {
 	if text == "" {
 		return fmt.Errorf("message cannot be empty")
 	}
@@ -99,24 +99,24 @@ func sendEditedMessage(chatID int64, messageID int, text string, replyMarkup *tg
 		msg.ReplyMarkup = replyMarkup
 	}
 
-	if _, err := ctx.Bot.Send(msg); err != nil {
+	if _, err := c.BotAPI.Send(msg); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func removeMessage(chatID int64, messageID int) error {
+func (c *Client) removeMessage(chatID int64, messageID int) error {
 	msgRm := tgbotapi.NewDeleteMessage(chatID, messageID)
 
-	if _, err := ctx.Bot.Send(msgRm); err != nil {
+	if _, err := c.BotAPI.Send(msgRm); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func sendNewImagedMessage(chatID int64, text string, image io.Reader, replyMarkup *tgbotapi.InlineKeyboardMarkup) error {
+func (c *Client) sendNewImagedMessage(chatID int64, text string, image io.Reader, replyMarkup *tgbotapi.InlineKeyboardMarkup) error {
 	hasher := sha1.New()
 	tmHash := strconv.Itoa(time.Now().Nanosecond())
 	hasher.Write([]byte(tmHash))
@@ -140,7 +140,7 @@ func sendNewImagedMessage(chatID int64, text string, image io.Reader, replyMarku
 	}
 
 	msg.Caption = escapeAll(text)
-	if _, err := ctx.Bot.Send(msg); err != nil {
+	if _, err := c.BotAPI.Send(msg); err != nil {
 		return err
 	}
 
@@ -171,16 +171,16 @@ func getImgFromTrackerRutracker(url string) (string, error) {
 	return imgURL, nil
 }
 
-func httpClient() *http.Client {
-	client := http.Client{
-		CheckRedirect: func(r *http.Request, via []*http.Request) error {
-			r.URL.Opaque = r.URL.Path
-			return nil
-		},
-	}
-
-	return &client
-}
+// func httpClient() *http.Client {
+// 	client := http.Client{
+// 		CheckRedirect: func(r *http.Request, via []*http.Request) error {
+// 			r.URL.Opaque = r.URL.Path
+// 			return nil
+// 		},
+// 	}
+//
+// 	return &client
+// }
 
 func escapeAll(text string) string {
 	re := strings.NewReplacer("-", "\\-",

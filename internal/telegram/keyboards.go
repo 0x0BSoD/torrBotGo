@@ -2,6 +2,20 @@ package telegram
 
 import tgbotapi "github.com/0x0BSoD/telegram-bot-api"
 
+var configKbd = tgbotapi.NewInlineKeyboardMarkup(
+	tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData("Show full config as JSON", "json_show"),
+	),
+)
+
+var mainKbd = tgbotapi.NewReplyKeyboard(
+	tgbotapi.NewKeyboardButtonRow(
+		tgbotapi.NewKeyboardButton("All torrents"),
+		tgbotapi.NewKeyboardButton("Active torrents"),
+		tgbotapi.NewKeyboardButton("Not Active torrents"),
+	),
+)
+
 func torrentAddKbd(byFile bool) tgbotapi.InlineKeyboardMarkup {
 	var rows [][]tgbotapi.InlineKeyboardButton
 	var btns []tgbotapi.InlineKeyboardButton
@@ -81,17 +95,3 @@ func torrentDetailKbd(hash string, status int) tgbotapi.InlineKeyboardMarkup {
 		),
 	)
 }
-
-var configKbd = tgbotapi.NewInlineKeyboardMarkup(
-	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData("Show full config as JSON", "json_show"),
-	),
-)
-
-var mainKbd = tgbotapi.NewReplyKeyboard(
-	tgbotapi.NewKeyboardButtonRow(
-		tgbotapi.NewKeyboardButton("All torrents"),
-		tgbotapi.NewKeyboardButton("Active torrents"),
-		tgbotapi.NewKeyboardButton("Not Active torrents"),
-	),
-)

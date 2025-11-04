@@ -7,13 +7,13 @@ import (
 	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
 )
 
-func handleInline(upd tgbotapi.Update) {
+func (c *Client) handleInline(upd tgbotapi.Update) {
 	if upd.CallbackQuery == nil || upd.CallbackQuery.Data == "" {
 		return
 	}
 
 	messageID := upd.CallbackQuery.Message.MessageID
-	ctx.chatID = upd.CallbackQuery.Message.Chat.ID
+	c.chatID = upd.CallbackQuery.Message.Chat.ID
 	var err error
 
 	if strings.HasPrefix(upd.CallbackQuery.Data, "file+add-") {
@@ -60,12 +60,12 @@ func handleInline(upd tgbotapi.Update) {
 		case "json":
 			err = sendJSONConfig()
 		default:
-			sendError("I don't know that command, handleInline")
+			c.sendError("I don't know that command, handleInline")
 			return
 		}
 	}
 
 	if err != nil {
-		sendError(err.Error())
+		c.sendError(err.Error())
 	}
 }

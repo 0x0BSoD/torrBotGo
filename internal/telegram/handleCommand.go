@@ -6,10 +6,9 @@ import (
 	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
 )
 
-func handleCommand(upd tgbotapi.Update) {
-	ID := upd.Message.Chat.ID
-	ctx.chatID = ID
-	msg := tgbotapi.NewMessage(ID, "")
+func (c *Client) handleCommand(upd tgbotapi.Update) {
+	c.chatID = upd.Message.Chat.ID
+	msg := tgbotapi.NewMessage(c.chatID, "")
 	msg.ParseMode = "MarkdownV2"
 	var err error
 	var text string
@@ -24,17 +23,17 @@ func handleCommand(upd tgbotapi.Update) {
 		text, err = sendConfig()
 		msg.ReplyMarkup = configKbd
 	default:
-		sendError("I don't know that command. handleCommand")
+		c.sendError("I don't know that command. handleCommand")
 		return
 	}
 
 	msg.Text = text
 
 	if err != nil {
-		sendError(err.Error())
+		c.sendError(err.Error())
 	} else {
 		if msg.Text != "" {
-			if _, err := ctx.Bot.Send(msg); err != nil {
+			if _, err := c.BotAPI.Send(msg); err != nil {
 				log.Panic(err)
 			}
 		}
