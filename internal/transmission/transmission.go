@@ -1,4 +1,4 @@
-package main
+package transmission
 
 import (
 	"bytes"
@@ -11,20 +11,30 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"sort"
 	"strings"
 	"text/template"
 	"time"
 
+	"github.com/jackpal/bencode-go"
+
 	glh "github.com/0x0BSoD/goLittleHelpers"
 	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
 	"github.com/0x0BSoD/transmission"
-	"github.com/jackpal/bencode-go"
+
+	"github.com/0x0BSoD/torrBotGo/internal/ctx"
+)
+
+const (
+	all showFilter = iota
+	active
+	notActive
 )
 
 // TORRENT - selected torrent
 var TORRENT *transmission.Torrent
 
-// MAGNET - magnet link
+// Magnet - magnet link
 var MAGNET string
 
 // TFILE - downloaded torrent file
@@ -33,11 +43,8 @@ var TFILE []byte
 // MESSAGEID - id of 'dialog' message
 var MESSAGEID int
 
-// ========================
-// STATUS
-//=========================
-
-type status struct {
+// Status - struct for storing current status of Transmission
+type Status struct {
 	Active     int
 	Paused     int
 	UploadS    string
@@ -47,46 +54,7 @@ type status struct {
 	FreeSpace  string
 }
 
-func sendStatus() (string, error) {
-	stats, err := ctx.TrAPI.Session.Stats()
-	if err != nil {
-		return "", err
-	}
-
-	t, err := template.ParseFiles(ctx.wd + "templates/status.gotmpl")
-	if err != nil {
-		return "", err
-	}
-
-	if ctx.Debug {
-		_ = glh.PrettyPrint(stats)
-	}
-
-	fmt.Println(">>>", ctx.TrAPI.Session.DownloadDir)
-
-	freeSpaceData, err := ctx.TrAPI.FreeSpace(ctx.TrAPI.Session.DownloadDir)
-	if err != nil {
-		return "", fmt.Errorf("error with %s: %s", ctx.TrAPI.Session.DownloadDir, err)
-	}
-
-	var dRes bytes.Buffer
-	err = t.Execute(&dRes, status{
-		Active:     stats.ActiveTorrentCount,
-		Paused:     stats.PausedTorrentCount,
-		UploadS:    glh.ConvertBytes(float64(stats.UploadSpeed), glh.Speed),
-		DownloadS:  glh.ConvertBytes(float64(stats.DownloadSpeed), glh.Speed),
-		Uploaded:   glh.ConvertBytes(float64(stats.CurrentStats.UploadedBytes), glh.Size),
-		Downloaded: glh.ConvertBytes(float64(stats.CurrentStats.DownloadedBytes), glh.Size),
-		FreeSpace:  glh.ConvertBytes(float64(freeSpaceData), glh.Size),
-	})
-	if err != nil {
-		return "", err
-	}
-
-	return dRes.String(), nil
-}
-
-type sessConfig struct {
+type SessConfig struct {
 	DownloadDir   string
 	StartAdded    bool
 	SpeedLimitD   string
@@ -95,66 +63,6 @@ type sessConfig struct {
 	SpeedLimitUEn bool
 	DownloadQEn   bool
 	DownloadQSize int
-}
-
-func sendConfig() (string, error) {
-	err := ctx.TrAPI.Session.Update()
-	if err != nil {
-		return "", err
-	}
-
-	sc := ctx.TrAPI.Session
-
-	t, err := template.ParseFiles(ctx.wd + "templates/config.gotmpl")
-	if err != nil {
-		return "", err
-	}
-
-	if ctx.Debug {
-		_ = glh.PrettyPrint(sc)
-	}
-
-	var dRes bytes.Buffer
-	err = t.Execute(&dRes, sessConfig{
-		DownloadDir:   sc.DownloadDir,
-		StartAdded:    sc.StartAddedTorrents,
-		SpeedLimitD:   glh.ConvertBytes(float64(sc.SpeedLimitDown), glh.Speed),
-		SpeedLimitDEn: sc.SpeedLimitDownEnabled,
-		SpeedLimitU:   glh.ConvertBytes(float64(sc.SpeedLimitUp), glh.Speed),
-		SpeedLimitUEn: sc.SpeedLimitUpEnabled,
-		DownloadQEn:   sc.DownloadQueueEnabled,
-		DownloadQSize: sc.DownloadQueueSize,
-	})
-	if err != nil {
-		return "", err
-	}
-
-	return dRes.String(), nil
-}
-
-func sendJSONConfig() error {
-	err := ctx.TrAPI.Session.Update()
-	if err != nil {
-		return err
-	}
-
-	sc := ctx.TrAPI.Session
-
-	if ctx.Debug {
-		_ = glh.PrettyPrint(sc)
-	}
-
-	b, err := json.MarshalIndent(sc, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	err = sendNewMessage(ctx.chatID, fmt.Sprintf("`%s`", string(b)), nil)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 type torrent struct {
@@ -179,18 +87,101 @@ type torrent struct {
 
 type showFilter int
 
-const (
-	all showFilter = iota
-	active
-	notActive
-)
+type Client struct {
+	globalContext ctx.GlobalContext
+}
+
+func (c *Client) SendStatus() (string, error) {
+	stats, err := c.globalContext.TrAPI.Session.Stats()
+	if err != nil {
+		return "", err
+	}
+
+	t, err := template.ParseFiles(c.globalContext.Cwd + "templates/status.gotmpl")
+	if err != nil {
+		return "", err
+	}
+
+	freeSpaceData, err := c.globalContext.TrAPI.FreeSpace(c.globalContext.TrAPI.Session.DownloadDir)
+	if err != nil {
+		return "", fmt.Errorf("error with %s: %s", c.globalContext.TrAPI.Session.DownloadDir, err)
+	}
+
+	var dRes bytes.Buffer
+	err = t.Execute(&dRes, Status{
+		Active:     stats.ActiveTorrentCount,
+		Paused:     stats.PausedTorrentCount,
+		UploadS:    glh.ConvertBytes(float64(stats.UploadSpeed), glh.Speed),
+		DownloadS:  glh.ConvertBytes(float64(stats.DownloadSpeed), glh.Speed),
+		Uploaded:   glh.ConvertBytes(float64(stats.CurrentStats.UploadedBytes), glh.Size),
+		Downloaded: glh.ConvertBytes(float64(stats.CurrentStats.DownloadedBytes), glh.Size),
+		FreeSpace:  glh.ConvertBytes(float64(freeSpaceData), glh.Size),
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return dRes.String(), nil
+}
+
+func (c *Client) SendConfig() (string, error) {
+	err := c.globalContext.TrAPI.Session.Update()
+	if err != nil {
+		return "", err
+	}
+
+	sc := c.globalContext.TrAPI.Session
+
+	t, err := template.ParseFiles(c.globalContext.Cwd + "templates/config.gotmpl")
+	if err != nil {
+		return "", err
+	}
+
+	var dRes bytes.Buffer
+	err = t.Execute(&dRes, SessConfig{
+		DownloadDir:   sc.DownloadDir,
+		StartAdded:    sc.StartAddedTorrents,
+		SpeedLimitD:   glh.ConvertBytes(float64(sc.SpeedLimitDown), glh.Speed),
+		SpeedLimitDEn: sc.SpeedLimitDownEnabled,
+		SpeedLimitU:   glh.ConvertBytes(float64(sc.SpeedLimitUp), glh.Speed),
+		SpeedLimitUEn: sc.SpeedLimitUpEnabled,
+		DownloadQEn:   sc.DownloadQueueEnabled,
+		DownloadQSize: sc.DownloadQueueSize,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return dRes.String(), nil
+}
+
+func (c *Client) SendJSONConfig() error {
+	err := c.globalContext.TrAPI.Session.Update()
+	if err != nil {
+		return err
+	}
+
+	sc := c.globalContext.TrAPI.Session
+
+	b, err := json.MarshalIndent(sc, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	err = sendNewMessage(c.globalContext.ChatID, fmt.Sprintf("`%s`", string(b)), nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
 
 //======================================================================================================================
 // GET
 //======================================================================================================================
 
-func sendTorrent(id int64, torr *transmission.Torrent) error {
-	t, err := template.ParseFiles(ctx.wd + "templates/torrentListItem.gotmpl")
+func (c *Client) SendTorrent(id int64, torr *transmission.Torrent) error {
+	t, err := template.ParseFiles(c.globalContext.Cwd + "templates/torrentListItem.gotmpl")
 	if err != nil {
 		return err
 	}
@@ -220,31 +211,41 @@ func sendTorrent(id int64, torr *transmission.Torrent) error {
 	return nil
 }
 
-func sendTorrentList(sf showFilter) error {
-	// TODO: sort by priority
-	//sort.Slice(torrents[:], func(i, j int) bool {
-	//	return torrents[i].QueuePosition < torrents[i].QueuePosition
-	//})
+func (c *Client) SendTorrentList(sf showFilter) error {
+	tMap, err := c.globalContext.TorrentCache.Snapshot()
+	if len(err) > 1 {
+		// TODO: refactor it
+		return fmt.Errorf("%v", err)
+	}
 
-	ctx.Mutex.Lock()
-	defer ctx.Mutex.Unlock()
-	for _, i := range ctx.TorrentCache.Items {
+	keys := make([]string, 0, len(tMap))
+	for key := range tMap {
+		keys = append(keys, key)
+	}
+
+	sort.Slice(keys, func(i, j int) bool {
+		one := tMap[keys[i]]
+		two := tMap[keys[j]]
+		return one.QueuePosition < two.QueuePosition
+	})
+
+	for _, i := range tMap {
 		switch sf {
 		case all:
-			err := sendTorrent(ctx.chatID, i)
+			err := c.SendTorrent(c.globalContext.ChatID, i)
 			if err != nil {
 				return err
 			}
 		case active:
 			if i.Status != 0 && i.ErrorString == "" {
-				err := sendTorrent(ctx.chatID, i)
+				err := c.SendTorrent(c.globalContext.ChatID, i)
 				if err != nil {
 					return err
 				}
 			}
 		case notActive:
 			if i.Status == 0 {
-				err := sendTorrent(ctx.chatID, i)
+				err := c.SendTorrent(c.globalContext.ChatID, i)
 				if err != nil {
 					return err
 				}
@@ -810,35 +811,4 @@ func addTorrentFile(operation string) error {
 	updateCache()
 
 	return nil
-}
-
-// TODO: on start it triggered
-func updateCache() {
-	tMap, err := ctx.TrAPI.GetTorrentMap()
-	if err != nil {
-		panic(err)
-	}
-	changed := ctx.TorrentCache.update(tMap)
-
-	if len(changed) == 0 {
-		return
-	}
-
-	for _, i := range changed {
-		if i.ErrorString != "" {
-			err := sendNewMessage(
-				ctx.chatID,
-				fmt.Sprintf("🔥️ Failed\n%s\nError:\n%s", i.Name, i.ErrorString),
-				nil,
-			)
-			if err != nil {
-				panic(err)
-			}
-		} else if i.Status != 4 && i.Status != 0 && i.PercentDone == 1 {
-			err := sendNewMessage(ctx.chatID, fmt.Sprintf("🎉 Downloaded\n%s", i.Name), nil)
-			if err != nil {
-				panic(err)
-			}
-		}
-	}
 }

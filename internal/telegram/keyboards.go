@@ -1,4 +1,4 @@
-package main
+package telegram
 
 import tgbotapi "github.com/0x0BSoD/telegram-bot-api"
 
@@ -80,7 +80,6 @@ func torrentDetailKbd(hash string, status int) tgbotapi.InlineKeyboardMarkup {
 			tgbotapi.NewInlineKeyboardButtonData("🔁", "update_"+hash),
 		),
 	)
-
 }
 
 var configKbd = tgbotapi.NewInlineKeyboardMarkup(

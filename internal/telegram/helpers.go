@@ -1,4 +1,4 @@
-package main
+package telegram
 
 import (
 	"crypto/sha1"
@@ -117,7 +117,6 @@ func removeMessage(chatID int64, messageID int) error {
 }
 
 func sendNewImagedMessage(chatID int64, text string, image io.Reader, replyMarkup *tgbotapi.InlineKeyboardMarkup) error {
-
 	hasher := sha1.New()
 	tmHash := strconv.Itoa(time.Now().Nanosecond())
 	hasher.Write([]byte(tmHash))
@@ -150,7 +149,6 @@ func sendNewImagedMessage(chatID int64, text string, image io.Reader, replyMarku
 
 // rutracker
 func getImgFromTrackerRutracker(url string) (string, error) {
-
 	if !strings.HasPrefix(url, "https://rutracker.org/") {
 		return "", errors.New("not a rutracker")
 	}

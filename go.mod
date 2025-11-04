@@ -11,9 +11,12 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
+require go.uber.org/multierr v1.10.0 // indirect
+
 require (
 	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/go-telegram-bot-api/telegram-bot-api v4.6.4+incompatible // indirect
 	github.com/technoweenie/multipartstreamer v1.0.1 // indirect
+	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.46.0 // indirect
 )

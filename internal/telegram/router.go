@@ -1,4 +1,4 @@
-package main
+package telegram
 
 import (
 	tgbotapi "github.com/0x0BSoD/telegram-bot-api"

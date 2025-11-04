@@ -3,33 +3,21 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
-	"log"
-	"sync"
 	"time"
 
 	glh "github.com/0x0BSoD/goLittleHelpers"
 	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
 	"github.com/0x0BSoD/transmission"
-)
+	"go.uber.org/zap/zapcore"
 
-// GlobalContext - struct for keeping needed stuff, I dragged it through almost all functions
-type GlobalContext struct {
-	Bot          *tgbotapi.BotAPI
-	TrAPI        *transmission.Client
-	Mutex        sync.Mutex
-	Debug        bool
-	Categories   map[string]string
-	TorrentCache torrents
-	imgDir       string
-	errMedia     string
-	chatID       int64
-	wd           string
-}
+	"github.com/0x0BSoD/torrBotGo/internal/cache"
+	_ctx "github.com/0x0BSoD/torrBotGo/internal/ctx"
+	"github.com/0x0BSoD/torrBotGo/pkg/logger"
+)
 
 var (
 	path string
-	ctx  GlobalContext
+	ctx  _ctx.GlobalContext
 )
 
 func init() {
@@ -41,21 +29,23 @@ func main() {
 	// Config part =======
 	flag.Parse()
 
+	log := logger.New(zapcore.DebugLevel)
+
 	cfg := marshalConf(path)
 
 	ctx.Debug = cfg.App.Debug
 
 	b, err := tgbotapi.NewBotAPI(cfg.Telegram.Token)
 	if err != nil {
-		log.Fatalf("can't start session with telegram: %s", err)
+		log.Sugar().Errorf("can't start session with telegram: %s", err)
 	}
 	b.Debug = cfg.App.Debug
 
 	ctx.Bot = b
 	ctx.Categories = cfg.App.Dirs.Categories
-	ctx.wd = cfg.App.WorkingDir
-	ctx.imgDir = cfg.App.ImgDir
-	ctx.errMedia = cfg.App.ErrorMedia
+	ctx.Cwd = cfg.App.WorkingDir
+	ctx.ImgDir = cfg.App.ImgDir
+	ctx.ErrMedia = cfg.App.ErrorMedia
 
 	conf := transmission.Config{
 		Address:  cfg.Transmission.Config.URI,
@@ -68,68 +58,58 @@ func main() {
 	}
 
 	// App run part ====
-	fmt.Print("Connecting to transmission API ")
+	log.Info("connecting to transmission API")
 	t, err := transmission.New(conf)
 	t.Context = context.TODO()
 	if err != nil {
-		fmt.Println("❌")
-		log.Fatalf(">> can't create transmission session: %s", err)
+		log.Sugar().Errorf("can't create transmission session: %s", err)
 	}
 	defer func() {
-		fmt.Print("Closing transmission session ")
+		log.Info("closing transmission session")
 		err := t.Session.Close()
 		if err != nil {
-			fmt.Println("❌")
-			log.Panic(err)
+			log.Sugar().Error(err)
 		}
-		fmt.Println("✔️")
 	}()
 
 	if (transmission.SetSessionArgs{}) != cfg.Transmission.Custom {
-		fmt.Print("Setting custom transmission parameters ")
+		log.Info("setting custom transmission parameters")
 		err := t.Session.Set(cfg.Transmission.Custom)
 		if err != nil {
-			fmt.Println("❌")
-			log.Fatalf(">> starting transmission session failed: %s", err)
+			log.Sugar().Errorf("starting transmission session failed: %s", err)
 		}
 	}
-	fmt.Println("✔️")
 
-	fmt.Print("Updating transmission session info ")
+	log.Info("updating transmission session info ")
 	err = t.Session.Update()
 	if err != nil {
-		fmt.Println("❌")
-		log.Fatalf(">> updating transmission session info failed: %s", err)
+		log.Sugar().Errorf("updating transmission session info failed: %s", err)
 	}
-	fmt.Println("✔️")
 
-	fmt.Print("Setting torrents cache ")
+	log.Info("setting torrents cache")
 	tMap, err := t.GetTorrentMap()
 	if err != nil {
-		fmt.Println("❌")
-		log.Fatalf(">> get torrent map failed: %s", err)
+		log.Sugar().Errorf("get torrent map failed: %s", err)
 	}
-	ctx.TorrentCache = initCache(tMap)
-	fmt.Println("✔️")
+	ctx.TorrentCache = *cache.New(tMap)
 
 	ctx.TrAPI = t
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 
-	fmt.Print("Getting updates channel ")
+	log.Info("getting updates channel")
 	updates, err := ctx.Bot.GetUpdatesChan(u)
 	if err != nil {
-		fmt.Println("❌")
-		log.Fatalf(">> getting tg updates failed: %s", err)
+		log.Sugar().Errorf("getting tg updates failed: %s", err)
 	}
-	fmt.Println("✔️")
 
-	fmt.Println("Bot started ✔️")
+	log.Debug("bot started")
 
+	// TODO: ADD NEW WATCHER
 	go func() {
 		for {
-			updateCache()
+			ctx.TorrentCache.Update()
 			time.Sleep(1 * time.Minute)
 		}
 	}()
