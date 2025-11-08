@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/0x0BSoD/transmission"
-	"gopkg.in/yaml.v2"
 	"io"
 	"os"
 	"strings"
+
+	"github.com/0x0BSoD/transmission"
+	"gopkg.in/yaml.v2"
 )
 
 type config struct {
@@ -35,50 +36,41 @@ type trConfig struct {
 	Password string `yaml:"password"`
 }
 
-func marshalConf(path string) config {
+func marshalConf(path string) (config, error) {
 	f, err := os.Open(path)
 	if err != nil {
-		fmt.Printf("config file '%s' not found, %s", path, err.Error())
-		os.Exit(-1)
+		return config{}, fmt.Errorf("config file not found, %w", err)
 	}
 
 	b, err := io.ReadAll(f)
 	if err != nil {
-		fmt.Printf("can't read file '%s', %s", path, err.Error())
-		os.Exit(-1)
+		return config{}, fmt.Errorf("can't read file, %w", err)
 	}
 
 	var result config
 	if err = yaml.Unmarshal(b, &result); err != nil {
-		fmt.Printf("can't parse file '%s', %s", path, err.Error())
-		os.Exit(-1)
+		return config{}, fmt.Errorf("config file marshal, %w", err)
 	}
 
 	if _, err := os.Stat(result.App.ImgDir); os.IsNotExist(err) {
-		fmt.Printf("❌ %s not exist \n", result.App.ImgDir)
-		err = os.MkdirAll(result.App.ImgDir, 0755)
+		err = os.MkdirAll(result.App.ImgDir, 0o755)
 		if err != nil {
-			fmt.Printf("can't create ImgDir directory '%s', %s", result.App.ImgDir, err.Error())
-			os.Exit(-1)
+			return config{}, fmt.Errorf("can't create ImgDir directory, %w", err)
 		}
 	}
 
 	if _, err := os.Stat(result.App.Dirs.DefaultDownloadDir); os.IsNotExist(err) {
-		fmt.Printf("❌ %s not exist \n", result.App.Dirs.DefaultDownloadDir)
-		err = os.MkdirAll(result.App.ImgDir, 0755)
+		err = os.MkdirAll(result.App.ImgDir, 0o755)
 		if err != nil {
-			fmt.Printf("can't create DefaultDownloadDir directory '%s', %s", result.App.ImgDir, err.Error())
-			os.Exit(-1)
+			return config{}, fmt.Errorf("can't create DefaultDownloadDir directory, %w", err)
 		}
 	}
 
 	for _, d := range result.App.Dirs.Categories {
 		if _, err := os.Stat(result.App.Dirs.DefaultDownloadDir + d); os.IsNotExist(err) {
-			fmt.Printf("❌ %s not exist \n", result.App.Dirs.DefaultDownloadDir+d)
-			err = os.MkdirAll(result.App.Dirs.DefaultDownloadDir+d, 0755)
+			err = os.MkdirAll(result.App.Dirs.DefaultDownloadDir+d, 0o755)
 			if err != nil {
-				fmt.Printf("can't create %s directory '%s', %s", d, result.App.ImgDir, err.Error())
-				os.Exit(-1)
+				return config{}, fmt.Errorf("can't create directory, %w", err)
 			}
 		}
 	}
@@ -88,9 +80,8 @@ func marshalConf(path string) config {
 	}
 
 	if _, err := os.Stat(result.App.WorkingDir); os.IsNotExist(err) {
-		fmt.Printf("wrong WorkingDir directory '%s', %s", result.App.ImgDir, err.Error())
-		os.Exit(-1)
+		return config{}, fmt.Errorf("wrong WorkingDir directory, %w", err)
 	}
 
-	return result
+	return result, nil
 }

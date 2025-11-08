@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -221,14 +222,8 @@ func sendTorrent(id int64, torr *transmission.Torrent) error {
 }
 
 func sendTorrentList(sf showFilter) error {
-	// TODO: sort by priority
-	//sort.Slice(torrents[:], func(i, j int) bool {
-	//	return torrents[i].QueuePosition < torrents[i].QueuePosition
-	//})
-
-	ctx.Mutex.Lock()
-	defer ctx.Mutex.Unlock()
-	for _, i := range ctx.TorrentCache.Items {
+	items, _ := ctx.TorrentCache.Snapshot()
+	for _, i := range items {
 		switch sf {
 		case all:
 			err := sendTorrent(ctx.chatID, i)
@@ -256,7 +251,7 @@ func sendTorrentList(sf showFilter) error {
 
 func getTorrentDetails(hash string) (string, error) {
 	var ok bool
-	if TORRENT, ok = ctx.TorrentCache.Items[hash]; ok {
+	if TORRENT, ok = ctx.TorrentCache.GetByHash(hash); ok {
 		var active bool
 		if TORRENT.Status != 0 {
 			active = true
@@ -309,7 +304,7 @@ type filesList struct {
 }
 
 func sendTorrentDetails(hash string, messageID int, md5SumOld string) error {
-	updateCache()
+	updateCache(context.TODO(), &ctx)
 
 	t, err := getTorrentDetails(hash)
 	if err != nil {
@@ -332,8 +327,7 @@ func sendTorrentDetails(hash string, messageID int, md5SumOld string) error {
 }
 
 func sendTorrentDetailsByID(torrentID int64) error {
-	hash := ctx.TorrentCache.getHash(int(torrentID))
-
+	hash, _ := ctx.TorrentCache.GetHash((int(torrentID)))
 	t, err := getTorrentDetails(hash)
 	if err != nil {
 		return err
@@ -348,8 +342,9 @@ func sendTorrentDetailsByID(torrentID int64) error {
 }
 
 func sendTorrentFiles(hash string) error {
-	files := *ctx.TorrentCache.Items[hash].Files
-	filesStats := *ctx.TorrentCache.Items[hash].FileStats
+	t, _ := ctx.TorrentCache.GetByHash(hash)
+	files := *t.Files
+	filesStats := *t.FileStats
 
 	for i := 0; i < len(files); i++ {
 
@@ -393,7 +388,8 @@ func searchTorrent(text string) error {
 
 	re := regexp.MustCompile(searchString[1])
 
-	for _, t := range ctx.TorrentCache.Items {
+	items, _ := ctx.TorrentCache.Snapshot()
+	for _, t := range items {
 		if re.Match([]byte(t.Name)) {
 			err := sendTorrent(ctx.chatID, t)
 			if err != nil {
@@ -472,7 +468,7 @@ func addTorrentMagnet(operation string) error {
 		return err
 	}
 
-	updateCache()
+	updateCache(context.TODO(), &ctx)
 
 	return nil
 }
@@ -493,7 +489,7 @@ func stopTorrent(hash string, messageID int, md5SumOld string) error {
 
 	time.Sleep(6 * time.Second)
 
-	updateCache()
+	updateCache(context.TODO(), &ctx)
 
 	t, err := getTorrentDetails(hash)
 	if err != nil {
@@ -531,7 +527,7 @@ func startTorrent(hash string, messageID int, md5SumOld string) error {
 
 	time.Sleep(6 * time.Second)
 
-	updateCache()
+	updateCache(context.TODO(), &ctx)
 
 	t, err := getTorrentDetails(hash)
 	if err != nil {
@@ -602,7 +598,7 @@ func removeTorrent(hash string, messageID int, what string) error {
 		return err
 	}
 
-	updateCache()
+	updateCache(context.TODO(), &ctx)
 
 	return nil
 }
@@ -662,7 +658,7 @@ func queueTorrent(hash string, messageID int, what string) error {
 		return err
 	}
 
-	updateCache()
+	updateCache(context.TODO(), &ctx)
 
 	return nil
 }
@@ -807,38 +803,72 @@ func addTorrentFile(operation string) error {
 		return err
 	}
 
-	updateCache()
+	updateCache(context.TODO(), &ctx)
 
 	return nil
 }
 
-// TODO: on start it triggered
-func updateCache() {
-	tMap, err := ctx.TrAPI.GetTorrentMap()
-	if err != nil {
-		panic(err)
-	}
-	changed := ctx.TorrentCache.update(tMap)
+const doneEpsilon = 0.9999
 
-	if len(changed) == 0 {
-		return
+// startCacheUpdater - watcher that copare current torrent state and stored in memory
+func startCacheUpdater(ctx context.Context, interval time.Duration, gCtx *GlobalContext) {
+	t := time.NewTicker(interval)
+	defer t.Stop()
+
+	if err := updateCache(ctx, gCtx); err != nil {
+		fmt.Printf("StartCacheUpdater: %v", err)
 	}
 
-	for _, i := range changed {
-		if i.ErrorString != "" {
-			err := sendNewMessage(
-				ctx.chatID,
-				fmt.Sprintf("🔥️ Failed\n%s\nError:\n%s", i.Name, i.ErrorString),
-				nil,
-			)
-			if err != nil {
-				panic(err)
-			}
-		} else if i.Status != 4 && i.Status != 0 && i.PercentDone == 1 {
-			err := sendNewMessage(ctx.chatID, fmt.Sprintf("🎉 Downloaded\n%s", i.Name), nil)
-			if err != nil {
-				panic(err)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			if err := updateCache(ctx, gCtx); err != nil {
+				fmt.Printf("StartCacheUpdater: %v", err)
 			}
 		}
 	}
+}
+
+func updateCache(ctx context.Context, gCtx *GlobalContext) error {
+	tMap, err := gCtx.TrAPI.GetTorrentMap()
+	if err != nil {
+		return fmt.Errorf("updateCache: fetch: %w", err)
+	}
+
+	changed := gCtx.TorrentCache.Update(tMap)
+	if len(changed) == 0 {
+		return nil
+	}
+
+	var msgs []string
+	for _, t := range changed {
+		if t == nil {
+			continue
+		}
+
+		if t.ErrorString != "" {
+			msgs = append(msgs,
+				fmt.Sprintf("Failed\n%s\nError:\n%s", t.Name, t.ErrorString))
+			continue
+		}
+
+		if t.PercentDone >= doneEpsilon && t.Status == transmission.StatusSeeding {
+			msgs = append(msgs, fmt.Sprintf("Downloaded\n%s", t.Name))
+		}
+	}
+
+	for _, m := range msgs {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+		if err := sendNewMessage(gCtx.chatID, m, nil); err != nil {
+			fmt.Printf("UpdateCache: send failed: %v", err)
+		}
+	}
+
+	return nil
 }
