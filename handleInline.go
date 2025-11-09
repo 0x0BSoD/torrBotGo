@@ -17,11 +17,11 @@ func handleInline(upd tgbotapi.Update) {
 	var err error
 
 	if strings.HasPrefix(upd.CallbackQuery.Data, "file+add-") {
-		err = addTorrentFile(upd.CallbackQuery.Data)
+		err = ctx.Transmisson.addTorrentFile(upd.CallbackQuery.Data)
 	}
 
 	if strings.HasPrefix(upd.CallbackQuery.Data, "add-") {
-		err = addTorrentMagnet(upd.CallbackQuery.Data)
+		err = ctx.Transmisson.addTorrentMagnet(upd.CallbackQuery.Data)
 	}
 
 	if strings.Contains(upd.CallbackQuery.Data, "_") {
@@ -30,35 +30,35 @@ func handleInline(upd tgbotapi.Update) {
 		request := strings.Split(upd.CallbackQuery.Data, "_")
 		switch request[0] {
 		case "open", "update":
-			err = sendTorrentDetails(request[1], messageID, glh.GetMD5Hash(t))
+			err = ctx.Transmisson.sendTorrentDetails(request[1], messageID, glh.GetMD5Hash(t))
 		case "delete":
-			err = removeTorrentQuestion(request[1], messageID)
+			err = ctx.Transmisson.removeTorrentQuestion(request[1], messageID)
 		case "delete-yes":
-			err = removeTorrent(request[1], messageID, request[0])
+			err = ctx.Transmisson.removeTorrent(request[1], messageID, request[0])
 		case "delete-yes+data":
-			err = removeTorrent(request[1], messageID, request[0])
+			err = ctx.Transmisson.removeTorrent(request[1], messageID, request[0])
 		case "delete-no":
-			err = removeTorrent(request[1], messageID, request[0])
+			err = ctx.Transmisson.removeTorrent(request[1], messageID, request[0])
 		case "files":
-			err = sendTorrentFiles(request[1])
+			err = ctx.Transmisson.sendTorrentFiles(request[1])
 		case "stop":
-			err = stopTorrent(request[1], messageID, glh.GetMD5Hash(t))
+			err = ctx.Transmisson.stopTorrent(request[1], messageID, glh.GetMD5Hash(t))
 		case "start":
-			err = startTorrent(request[1], messageID, glh.GetMD5Hash(t))
+			err = ctx.Transmisson.startTorrent(request[1], messageID, glh.GetMD5Hash(t))
 		case "priority":
-			err = queueTorrentQuestion(request[1], messageID)
+			err = ctx.Transmisson.queueTorrentQuestion(request[1], messageID)
 		case "prior-top":
-			err = queueTorrent(request[1], messageID, request[0])
+			err = ctx.Transmisson.queueTorrent(request[1], messageID, request[0])
 		case "prior-up":
-			err = queueTorrent(request[1], messageID, request[0])
+			err = ctx.Transmisson.queueTorrent(request[1], messageID, request[0])
 		case "prior-down":
-			err = queueTorrent(request[1], messageID, request[0])
+			err = ctx.Transmisson.queueTorrent(request[1], messageID, request[0])
 		case "prior-bottom":
-			err = queueTorrent(request[1], messageID, request[0])
+			err = ctx.Transmisson.queueTorrent(request[1], messageID, request[0])
 		case "prior-no":
-			err = queueTorrent(request[1], messageID, request[0])
+			err = ctx.Transmisson.queueTorrent(request[1], messageID, request[0])
 		case "json":
-			err = sendJSONConfig()
+			err = ctx.Transmisson.sendJSONConfig()
 		default:
 			sendError("I don't know that command, handleInline")
 			return

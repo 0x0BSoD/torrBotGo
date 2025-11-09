@@ -13,7 +13,7 @@ func handleMessage(upd tgbotapi.Update) {
 	ctx.chatID = upd.Message.Chat.ID
 
 	if torrentID, err := strconv.ParseInt(upd.Message.Text, 10, 64); err == nil {
-		err = sendTorrentDetailsByID(torrentID)
+		err = ctx.Transmisson.sendTorrentDetailsByID(torrentID)
 		if err != nil {
 			sendError(err.Error())
 		}
@@ -21,19 +21,19 @@ func handleMessage(upd tgbotapi.Update) {
 	}
 
 	if upd.Message.Document != nil {
-		err = addTorrentFileQuestion(upd.Message.Document.FileID, upd.Message.MessageID)
+		err = ctx.Transmisson.addTorrentFileQuestion(upd.Message.Document.FileID, upd.Message.MessageID)
 	} else if strings.HasPrefix(upd.Message.Text, "magnet:") {
-		err = addTorrentMagnetQuestion(upd.Message.Text, upd.Message.MessageID)
+		err = ctx.Transmisson.addTorrentMagnetQuestion(upd.Message.Text, upd.Message.MessageID)
 	} else if strings.HasPrefix(upd.Message.Text, "t:") {
-		err = searchTorrent(upd.Message.Text)
+		err = ctx.Transmisson.searchTorrent(upd.Message.Text)
 	} else {
 		switch upd.Message.Text {
 		case "All torrents":
-			err = sendTorrentList(all)
+			err = ctx.Transmisson.sendTorrentList(all)
 		case "Active torrents":
-			err = sendTorrentList(active)
+			err = ctx.Transmisson.sendTorrentList(active)
 		case "Not Active torrents":
-			err = sendTorrentList(notActive)
+			err = ctx.Transmisson.sendTorrentList(notActive)
 		default:
 			sendError("I don't know that command. handleMessage")
 		}

@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -18,8 +17,10 @@ import (
 
 	glh "github.com/0x0BSoD/goLittleHelpers"
 	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
+	"github.com/0x0BSoD/torrBotGo/internal/cache"
 	"github.com/0x0BSoD/transmission"
 	"github.com/jackpal/bencode-go"
+	"go.uber.org/zap"
 )
 
 // TORRENT - selected torrent
@@ -33,6 +34,55 @@ var TFILE []byte
 
 // MESSAGEID - id of 'dialog' message
 var MESSAGEID int
+
+type trClient struct {
+	Api *transmission.Client
+	log *zap.Logger
+	cwd string
+}
+
+func trInit(cfg *config, log *zap.Logger) (*trClient, error) {
+	conf := transmission.Config{
+		Address:  cfg.Transmission.Config.URI,
+		User:     cfg.Transmission.Config.User,
+		Password: cfg.Transmission.Config.Password,
+	}
+
+	t, err := transmission.New(conf)
+	t.Context = context.TODO()
+	if err != nil {
+		return nil, err
+	}
+
+	if (transmission.SetSessionArgs{}) != cfg.Transmission.Custom {
+		log.Info("setting custom transmission parameters")
+		err := t.Session.Set(cfg.Transmission.Custom)
+		if err != nil {
+			log.Sugar().Errorf("getting tg updates failed: %w", err)
+			return nil, err
+		}
+	}
+
+	log.Info("updating transmission session info ")
+	err = t.Session.Update()
+	if err != nil {
+		return nil, err
+	}
+
+	tMap, err := t.GetTorrentMap()
+	if err != nil {
+		return nil, err
+	}
+	log.Info("setting torrents cache")
+	ctx.TorrentCache = cache.New(tMap)
+
+	var result trClient
+	result.Api = t
+	result.log = log
+	result.cwd = cfg.App.WorkingDir
+
+	return &result, nil
+}
 
 // ========================
 // STATUS
@@ -48,8 +98,8 @@ type status struct {
 	FreeSpace  string
 }
 
-func sendStatus() (string, error) {
-	stats, err := ctx.TrAPI.Session.Stats()
+func (c *trClient) sendStatus() (string, error) {
+	stats, err := c.Api.Session.Stats()
 	if err != nil {
 		return "", err
 	}
@@ -63,11 +113,11 @@ func sendStatus() (string, error) {
 		_ = glh.PrettyPrint(stats)
 	}
 
-	fmt.Println(">>>", ctx.TrAPI.Session.DownloadDir)
+	fmt.Println(">>>", c.Api.Session.DownloadDir)
 
-	freeSpaceData, err := ctx.TrAPI.FreeSpace(ctx.TrAPI.Session.DownloadDir)
+	freeSpaceData, err := c.Api.FreeSpace(c.Api.Session.DownloadDir)
 	if err != nil {
-		return "", fmt.Errorf("error with %s: %s", ctx.TrAPI.Session.DownloadDir, err)
+		return "", fmt.Errorf("error with %s: %s", c.Api.Session.DownloadDir, err)
 	}
 
 	var dRes bytes.Buffer
@@ -98,13 +148,13 @@ type sessConfig struct {
 	DownloadQSize int
 }
 
-func sendConfig() (string, error) {
-	err := ctx.TrAPI.Session.Update()
+func (c *trClient) sendConfig() (string, error) {
+	err := c.Api.Session.Update()
 	if err != nil {
 		return "", err
 	}
 
-	sc := ctx.TrAPI.Session
+	sc := c.Api.Session
 
 	t, err := template.ParseFiles(ctx.wd + "templates/config.gotmpl")
 	if err != nil {
@@ -133,13 +183,13 @@ func sendConfig() (string, error) {
 	return dRes.String(), nil
 }
 
-func sendJSONConfig() error {
-	err := ctx.TrAPI.Session.Update()
+func (c *trClient) sendJSONConfig() error {
+	err := c.Api.Session.Update()
 	if err != nil {
 		return err
 	}
 
-	sc := ctx.TrAPI.Session
+	sc := c.Api.Session
 
 	if ctx.Debug {
 		_ = glh.PrettyPrint(sc)
@@ -190,7 +240,7 @@ const (
 // GET
 //======================================================================================================================
 
-func sendTorrent(id int64, torr *transmission.Torrent) error {
+func (c *trClient) sendTorrent(id int64, torr *transmission.Torrent) error {
 	t, err := template.ParseFiles(ctx.wd + "templates/torrentListItem.gotmpl")
 	if err != nil {
 		return err
@@ -221,25 +271,25 @@ func sendTorrent(id int64, torr *transmission.Torrent) error {
 	return nil
 }
 
-func sendTorrentList(sf showFilter) error {
+func (c *trClient) sendTorrentList(sf showFilter) error {
 	items, _ := ctx.TorrentCache.Snapshot()
 	for _, i := range items {
 		switch sf {
 		case all:
-			err := sendTorrent(ctx.chatID, i)
+			err := c.sendTorrent(ctx.chatID, i)
 			if err != nil {
 				return err
 			}
 		case active:
 			if i.Status != 0 && i.ErrorString == "" {
-				err := sendTorrent(ctx.chatID, i)
+				err := c.sendTorrent(ctx.chatID, i)
 				if err != nil {
 					return err
 				}
 			}
 		case notActive:
 			if i.Status == 0 {
-				err := sendTorrent(ctx.chatID, i)
+				err := c.sendTorrent(ctx.chatID, i)
 				if err != nil {
 					return err
 				}
@@ -249,7 +299,7 @@ func sendTorrentList(sf showFilter) error {
 	return nil
 }
 
-func getTorrentDetails(hash string) (string, error) {
+func (c *trClient) getTorrentDetails(hash string) (string, error) {
 	var ok bool
 	if TORRENT, ok = ctx.TorrentCache.GetByHash(hash); ok {
 		var active bool
@@ -266,7 +316,7 @@ func getTorrentDetails(hash string) (string, error) {
 
 		t, err := template.ParseFiles(ctx.wd + "templates/torrent.gotmpl")
 		if err != nil {
-			log.Panic(err)
+			return "", err
 		}
 
 		var dRes bytes.Buffer
@@ -303,10 +353,10 @@ type filesList struct {
 	Downloading bool
 }
 
-func sendTorrentDetails(hash string, messageID int, md5SumOld string) error {
-	updateCache(context.TODO(), &ctx)
+func (c *trClient) sendTorrentDetails(hash string, messageID int, md5SumOld string) error {
+	c.updateCache(context.TODO(), &ctx)
 
-	t, err := getTorrentDetails(hash)
+	t, err := c.getTorrentDetails(hash)
 	if err != nil {
 		return err
 	}
@@ -326,9 +376,9 @@ func sendTorrentDetails(hash string, messageID int, md5SumOld string) error {
 	return nil
 }
 
-func sendTorrentDetailsByID(torrentID int64) error {
+func (c *trClient) sendTorrentDetailsByID(torrentID int64) error {
 	hash, _ := ctx.TorrentCache.GetHash((int(torrentID)))
-	t, err := getTorrentDetails(hash)
+	t, err := c.getTorrentDetails(hash)
 	if err != nil {
 		return err
 	}
@@ -341,7 +391,7 @@ func sendTorrentDetailsByID(torrentID int64) error {
 	return nil
 }
 
-func sendTorrentFiles(hash string) error {
+func (c *trClient) sendTorrentFiles(hash string) error {
 	t, _ := ctx.TorrentCache.GetByHash(hash)
 	files := *t.Files
 	filesStats := *t.FileStats
@@ -353,7 +403,7 @@ func sendTorrentFiles(hash string) error {
 
 		t, err := template.ParseFiles(ctx.wd + "templates/torrentFileItem.gotmpl")
 		if err != nil {
-			log.Panic(err)
+			return err
 		}
 
 		var dRes bytes.Buffer
@@ -369,7 +419,7 @@ func sendTorrentFiles(hash string) error {
 
 		if msg.Text != "" {
 			if _, err := ctx.Bot.Send(msg); err != nil {
-				log.Panic(err)
+				return err
 			}
 		}
 	}
@@ -377,7 +427,7 @@ func sendTorrentFiles(hash string) error {
 	return nil
 }
 
-func searchTorrent(text string) error {
+func (c *trClient) searchTorrent(text string) error {
 	searchString := strings.Split(text, "t:")
 
 	fmt.Println(searchString)
@@ -391,7 +441,7 @@ func searchTorrent(text string) error {
 	items, _ := ctx.TorrentCache.Snapshot()
 	for _, t := range items {
 		if re.Match([]byte(t.Name)) {
-			err := sendTorrent(ctx.chatID, t)
+			err := c.sendTorrent(ctx.chatID, t)
 			if err != nil {
 				return err
 			}
@@ -405,7 +455,7 @@ func searchTorrent(text string) error {
 // ACTIONS WITH TORRENT
 //======================================================================================================================
 
-func addTorrentMagnetQuestion(text string, messageID int) error {
+func (c *trClient) addTorrentMagnetQuestion(text string, messageID int) error {
 	var name string
 	var trackers []string
 	for _, i := range strings.Split(text, "&") {
@@ -436,7 +486,7 @@ func addTorrentMagnetQuestion(text string, messageID int) error {
 	return nil
 }
 
-func addTorrentMagnet(operation string) error {
+func (c *trClient) addTorrentMagnet(operation string) error {
 	if operation == "add-no" {
 		err := sendNewMessage(ctx.chatID, "Okay", nil)
 		if err != nil {
@@ -445,9 +495,9 @@ func addTorrentMagnet(operation string) error {
 		return nil
 	}
 
-	path := ctx.TrAPI.Session.DownloadDir + strings.Split(operation, "-")[1]
+	path := c.Api.Session.DownloadDir + strings.Split(operation, "-")[1]
 
-	res, err := ctx.TrAPI.AddTorrent(transmission.AddTorrentArg{
+	res, err := c.Api.AddTorrent(transmission.AddTorrentArg{
 		DownloadDir: path,
 		Filename:    MAGNET,
 		Paused:      false,
@@ -468,14 +518,14 @@ func addTorrentMagnet(operation string) error {
 		return err
 	}
 
-	updateCache(context.TODO(), &ctx)
+	c.updateCache(context.TODO(), &ctx)
 
 	return nil
 }
 
-func stopTorrent(hash string, messageID int, md5SumOld string) error {
+func (c *trClient) stopTorrent(hash string, messageID int, md5SumOld string) error {
 	if TORRENT == nil {
-		_, err := getTorrentDetails(hash)
+		_, err := c.getTorrentDetails(hash)
 		if err != nil {
 			return err
 		}
@@ -489,9 +539,9 @@ func stopTorrent(hash string, messageID int, md5SumOld string) error {
 
 	time.Sleep(6 * time.Second)
 
-	updateCache(context.TODO(), &ctx)
+	c.updateCache(context.TODO(), &ctx)
 
-	t, err := getTorrentDetails(hash)
+	t, err := c.getTorrentDetails(hash)
 	if err != nil {
 		return err
 	}
@@ -511,9 +561,9 @@ func stopTorrent(hash string, messageID int, md5SumOld string) error {
 	return nil
 }
 
-func startTorrent(hash string, messageID int, md5SumOld string) error {
+func (c *trClient) startTorrent(hash string, messageID int, md5SumOld string) error {
 	if TORRENT == nil {
-		_, err := getTorrentDetails(hash)
+		_, err := c.getTorrentDetails(hash)
 		if err != nil {
 			return err
 		}
@@ -527,9 +577,9 @@ func startTorrent(hash string, messageID int, md5SumOld string) error {
 
 	time.Sleep(6 * time.Second)
 
-	updateCache(context.TODO(), &ctx)
+	c.updateCache(context.TODO(), &ctx)
 
-	t, err := getTorrentDetails(hash)
+	t, err := c.getTorrentDetails(hash)
 	if err != nil {
 		return err
 	}
@@ -549,8 +599,8 @@ func startTorrent(hash string, messageID int, md5SumOld string) error {
 	return nil
 }
 
-func removeTorrentQuestion(hash string, messageID int) error {
-	msgTxt, err := getTorrentDetails(hash)
+func (c *trClient) removeTorrentQuestion(hash string, messageID int) error {
+	msgTxt, err := c.getTorrentDetails(hash)
 	if err != nil {
 		return err
 	}
@@ -564,21 +614,21 @@ func removeTorrentQuestion(hash string, messageID int) error {
 	return nil
 }
 
-func removeTorrent(hash string, messageID int, what string) error {
+func (c *trClient) removeTorrent(hash string, messageID int, what string) error {
 	whatS := strings.Split(what, "-")[1]
 	switch whatS {
 	case "yes":
-		err := ctx.TrAPI.RemoveTorrents([]*transmission.Torrent{TORRENT}, false)
+		err := c.Api.RemoveTorrents([]*transmission.Torrent{TORRENT}, false)
 		if err != nil {
 			return err
 		}
 	case "yes+data":
-		err := ctx.TrAPI.RemoveTorrents([]*transmission.Torrent{TORRENT}, true)
+		err := c.Api.RemoveTorrents([]*transmission.Torrent{TORRENT}, true)
 		if err != nil {
 			return err
 		}
 	case "no":
-		msgTxt, err := getTorrentDetails(hash)
+		msgTxt, err := c.getTorrentDetails(hash)
 		if err != nil {
 			return err
 		}
@@ -598,13 +648,13 @@ func removeTorrent(hash string, messageID int, what string) error {
 		return err
 	}
 
-	updateCache(context.TODO(), &ctx)
+	c.updateCache(context.TODO(), &ctx)
 
 	return nil
 }
 
-func queueTorrentQuestion(hash string, messageID int) error {
-	msgTxt, err := getTorrentDetails(hash)
+func (c *trClient) queueTorrentQuestion(hash string, messageID int) error {
+	msgTxt, err := c.getTorrentDetails(hash)
 	if err != nil {
 		return err
 	}
@@ -618,26 +668,26 @@ func queueTorrentQuestion(hash string, messageID int) error {
 	return nil
 }
 
-func queueTorrent(hash string, messageID int, what string) error {
+func (c *trClient) queueTorrent(hash string, messageID int, what string) error {
 	whatS := strings.Split(what, "-")[1]
 	switch whatS {
 	case "top":
-		err := ctx.TrAPI.QueueMoveTop([]*transmission.Torrent{TORRENT})
+		err := c.Api.QueueMoveTop([]*transmission.Torrent{TORRENT})
 		if err != nil {
 			return err
 		}
 	case "up":
-		err := ctx.TrAPI.QueueMoveUp([]*transmission.Torrent{TORRENT})
+		err := c.Api.QueueMoveUp([]*transmission.Torrent{TORRENT})
 		if err != nil {
 			return err
 		}
 	case "down":
-		err := ctx.TrAPI.QueueMoveDown([]*transmission.Torrent{TORRENT})
+		err := c.Api.QueueMoveDown([]*transmission.Torrent{TORRENT})
 		if err != nil {
 			return err
 		}
 	case "bottom":
-		err := ctx.TrAPI.QueueMoveBottom([]*transmission.Torrent{TORRENT})
+		err := c.Api.QueueMoveBottom([]*transmission.Torrent{TORRENT})
 		if err != nil {
 			return err
 		}
@@ -647,7 +697,7 @@ func queueTorrent(hash string, messageID int, what string) error {
 		return fmt.Errorf("nope, failed")
 	}
 
-	msgTxt, err := getTorrentDetails(hash)
+	msgTxt, err := c.getTorrentDetails(hash)
 	if err != nil {
 		return err
 	}
@@ -658,7 +708,7 @@ func queueTorrent(hash string, messageID int, what string) error {
 		return err
 	}
 
-	updateCache(context.TODO(), &ctx)
+	c.updateCache(context.TODO(), &ctx)
 
 	return nil
 }
@@ -674,7 +724,7 @@ type bencodeTorrent struct {
 	Info     bencodeInfo `bencode:"info"`
 }
 
-func addTorrentFileQuestion(fileID string, messageID int) error {
+func (c *trClient) addTorrentFileQuestion(fileID string, messageID int) error {
 	_url, err := ctx.Bot.GetFileDirectURL(fileID)
 	if err != nil {
 		return err
@@ -768,7 +818,7 @@ func addTorrentFileQuestion(fileID string, messageID int) error {
 	return nil
 }
 
-func addTorrentFile(operation string) error {
+func (c *trClient) addTorrentFile(operation string) error {
 	if operation == "file+add-no" {
 		TFILE = nil
 		err := sendNewMessage(ctx.chatID, "Okay", nil)
@@ -778,11 +828,11 @@ func addTorrentFile(operation string) error {
 		return nil
 	}
 
-	path := ctx.TrAPI.Session.DownloadDir + strings.Split(operation, "-")[1]
+	path := c.Api.Session.DownloadDir + strings.Split(operation, "-")[1]
 
 	base64Str := base64.StdEncoding.EncodeToString(TFILE)
 
-	res, err := ctx.TrAPI.AddTorrent(transmission.AddTorrentArg{
+	res, err := c.Api.AddTorrent(transmission.AddTorrentArg{
 		DownloadDir: path,
 		Metainfo:    base64Str,
 		Paused:      false,
@@ -803,7 +853,7 @@ func addTorrentFile(operation string) error {
 		return err
 	}
 
-	updateCache(context.TODO(), &ctx)
+	c.updateCache(context.TODO(), &ctx)
 
 	return nil
 }
@@ -811,11 +861,11 @@ func addTorrentFile(operation string) error {
 const doneEpsilon = 0.9999
 
 // startCacheUpdater - watcher that copare current torrent state and stored in memory
-func startCacheUpdater(ctx context.Context, interval time.Duration, gCtx *GlobalContext) {
+func (c *trClient) startCacheUpdater(ctx context.Context, interval time.Duration, gCtx *GlobalContext) {
 	t := time.NewTicker(interval)
 	defer t.Stop()
 
-	if err := updateCache(ctx, gCtx); err != nil {
+	if err := c.updateCache(ctx, gCtx); err != nil {
 		fmt.Printf("StartCacheUpdater: %v", err)
 	}
 
@@ -824,15 +874,15 @@ func startCacheUpdater(ctx context.Context, interval time.Duration, gCtx *Global
 		case <-ctx.Done():
 			return
 		case <-t.C:
-			if err := updateCache(ctx, gCtx); err != nil {
+			if err := c.updateCache(ctx, gCtx); err != nil {
 				fmt.Printf("StartCacheUpdater: %v", err)
 			}
 		}
 	}
 }
 
-func updateCache(ctx context.Context, gCtx *GlobalContext) error {
-	tMap, err := gCtx.TrAPI.GetTorrentMap()
+func (c *trClient) updateCache(ctx context.Context, gCtx *GlobalContext) error {
+	tMap, err := c.Api.GetTorrentMap()
 	if err != nil {
 		return fmt.Errorf("updateCache: fetch: %w", err)
 	}

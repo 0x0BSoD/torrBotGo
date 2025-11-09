@@ -19,9 +19,9 @@ func handleCommand(upd tgbotapi.Update) {
 		text = "Telegram Bot as interface for transmission"
 		msg.ReplyMarkup = mainKbd
 	case "status":
-		text, err = sendStatus()
+		text, err = ctx.Transmisson.sendStatus()
 	case "config":
-		text, err = sendConfig()
+		text, err = ctx.Transmisson.sendConfig()
 		msg.ReplyMarkup = configKbd
 	default:
 		sendError("I don't know that command. handleCommand")
