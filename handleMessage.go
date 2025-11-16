@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"strconv"
 	"strings"
 
@@ -8,7 +9,10 @@ import (
 )
 
 func handleMessage(upd tgbotapi.Update) {
-	var err error
+	var (
+		result map[string]string
+		err    error
+	)
 
 	ctx.chatID = upd.Message.Chat.ID
 
@@ -25,15 +29,15 @@ func handleMessage(upd tgbotapi.Update) {
 	} else if strings.HasPrefix(upd.Message.Text, "magnet:") {
 		err = ctx.Transmisson.addTorrentMagnetQuestion(upd.Message.Text, upd.Message.MessageID)
 	} else if strings.HasPrefix(upd.Message.Text, "t:") {
-		err = ctx.Transmisson.searchTorrent(upd.Message.Text)
+		result, err = ctx.Transmisson.SearchTorrent(upd.Message.Text)
 	} else {
 		switch upd.Message.Text {
 		case "All torrents":
-			err = ctx.Transmisson.sendTorrentList(all)
+			result, err = ctx.Transmisson.GetTorrents(all)
 		case "Active torrents":
-			err = ctx.Transmisson.sendTorrentList(active)
+			result, err = ctx.Transmisson.GetTorrents(active)
 		case "Not Active torrents":
-			err = ctx.Transmisson.sendTorrentList(notActive)
+			result, err = ctx.Transmisson.GetTorrents(notActive)
 		default:
 			sendError("I don't know that command. handleMessage")
 		}
@@ -41,5 +45,12 @@ func handleMessage(upd tgbotapi.Update) {
 
 	if err != nil {
 		sendError(err.Error())
+	} else {
+		for hash, text := range result {
+			replyMarkup := torrentKbd(hash)
+			if err = sendNewMessage(ctx.chatID, text, replyMarkup); err != nil {
+				log.Panic(err)
+			}
+		}
 	}
 }

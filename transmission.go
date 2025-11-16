@@ -36,7 +36,7 @@ var TFILE []byte
 var MESSAGEID int
 
 type trClient struct {
-	Api *transmission.Client
+	API *transmission.Client
 	log *zap.Logger
 	cwd string
 }
@@ -77,7 +77,7 @@ func trInit(cfg *config, log *zap.Logger) (*trClient, error) {
 	ctx.TorrentCache = cache.New(tMap)
 
 	var result trClient
-	result.Api = t
+	result.API = t
 	result.log = log
 	result.cwd = cfg.App.WorkingDir
 
@@ -98,8 +98,8 @@ type status struct {
 	FreeSpace  string
 }
 
-func (c *trClient) sendStatus() (string, error) {
-	stats, err := c.Api.Session.Stats()
+func (c *trClient) GetStatus() (string, error) {
+	stats, err := c.API.Session.Stats()
 	if err != nil {
 		return "", err
 	}
@@ -109,15 +109,9 @@ func (c *trClient) sendStatus() (string, error) {
 		return "", err
 	}
 
-	if ctx.Debug {
-		_ = glh.PrettyPrint(stats)
-	}
-
-	fmt.Println(">>>", c.Api.Session.DownloadDir)
-
-	freeSpaceData, err := c.Api.FreeSpace(c.Api.Session.DownloadDir)
+	freeSpaceData, err := c.API.FreeSpace(c.API.Session.DownloadDir)
 	if err != nil {
-		return "", fmt.Errorf("error with %s: %s", c.Api.Session.DownloadDir, err)
+		return "", err
 	}
 
 	var dRes bytes.Buffer
@@ -148,21 +142,17 @@ type sessConfig struct {
 	DownloadQSize int
 }
 
-func (c *trClient) sendConfig() (string, error) {
-	err := c.Api.Session.Update()
+func (c *trClient) GetConfig() (string, error) {
+	err := c.API.Session.Update()
 	if err != nil {
 		return "", err
 	}
 
-	sc := c.Api.Session
+	sc := c.API.Session
 
 	t, err := template.ParseFiles(ctx.wd + "templates/config.gotmpl")
 	if err != nil {
 		return "", err
-	}
-
-	if ctx.Debug {
-		_ = glh.PrettyPrint(sc)
 	}
 
 	var dRes bytes.Buffer
@@ -183,13 +173,13 @@ func (c *trClient) sendConfig() (string, error) {
 	return dRes.String(), nil
 }
 
-func (c *trClient) sendJSONConfig() error {
-	err := c.Api.Session.Update()
+func (c *trClient) GetJSONConfig() (string, error) {
+	err := c.API.Session.Update()
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	sc := c.Api.Session
+	sc := c.API.Session
 
 	if ctx.Debug {
 		_ = glh.PrettyPrint(sc)
@@ -197,15 +187,10 @@ func (c *trClient) sendJSONConfig() error {
 
 	b, err := json.MarshalIndent(sc, "", "  ")
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	err = sendNewMessage(ctx.chatID, fmt.Sprintf("`%s`", string(b)), nil)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return fmt.Sprintf("`%s`", string(b)), nil
 }
 
 type torrent struct {
@@ -240,10 +225,10 @@ const (
 // GET
 //======================================================================================================================
 
-func (c *trClient) sendTorrent(id int64, torr *transmission.Torrent) error {
+func (c *trClient) getTorrent(id int64, torr *transmission.Torrent) (string, string, error) {
 	t, err := template.ParseFiles(ctx.wd + "templates/torrentListItem.gotmpl")
 	if err != nil {
-		return err
+		return "", "", err
 	}
 
 	icon, status := parseStatus(torr.Status)
@@ -259,44 +244,45 @@ func (c *trClient) sendTorrent(id int64, torr *transmission.Torrent) error {
 		PosInQ:      torr.QueuePosition,
 	})
 	if err != nil {
-		return err
+		return "", "", err
 	}
 
-	replyMarkup := torrentKbd(torr.HashString)
-	err = sendNewMessage(id, dRes.String(), &replyMarkup)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return torr.HashString, dRes.String(), nil
 }
 
-func (c *trClient) sendTorrentList(sf showFilter) error {
+func (c *trClient) GetTorrents(sf showFilter) (map[string]string, error) {
 	items, _ := ctx.TorrentCache.Snapshot()
+
+	result := make(map[string]string)
+
 	for _, i := range items {
 		switch sf {
 		case all:
-			err := c.sendTorrent(ctx.chatID, i)
+			hash, text, err := c.getTorrent(ctx.chatID, i)
 			if err != nil {
-				return err
+				return nil, err
 			}
+			result[hash] = text
 		case active:
-			if i.Status != 0 && i.ErrorString == "" {
-				err := c.sendTorrent(ctx.chatID, i)
+			if i.Status != transmission.StatusStopped && i.ErrorString == "" {
+				hash, text, err := c.getTorrent(ctx.chatID, i)
 				if err != nil {
-					return err
+					return nil, err
 				}
+				result[hash] = text
 			}
 		case notActive:
-			if i.Status == 0 {
-				err := c.sendTorrent(ctx.chatID, i)
+			if i.Status == transmission.StatusStopped {
+				hash, text, err := c.getTorrent(ctx.chatID, i)
 				if err != nil {
-					return err
+					return nil, err
 				}
+				result[hash] = text
 			}
 		}
 	}
-	return nil
+
+	return result, nil
 }
 
 func (c *trClient) getTorrentDetails(hash string) (string, error) {
@@ -427,28 +413,30 @@ func (c *trClient) sendTorrentFiles(hash string) error {
 	return nil
 }
 
-func (c *trClient) searchTorrent(text string) error {
+func (c *trClient) SearchTorrent(text string) (map[string]string, error) {
 	searchString := strings.Split(text, "t:")
 
 	fmt.Println(searchString)
 
 	if len(searchString) <= 1 {
-		return errors.New("search string empty")
+		return nil, errors.New("search string empty")
 	}
 
 	re := regexp.MustCompile(searchString[1])
 
 	items, _ := ctx.TorrentCache.Snapshot()
+	result := make(map[string]string)
 	for _, t := range items {
 		if re.Match([]byte(t.Name)) {
-			err := c.sendTorrent(ctx.chatID, t)
+			hash, text, err := c.getTorrent(ctx.chatID, t)
 			if err != nil {
-				return err
+				return nil, err
 			}
+			result[hash] = text
 		}
 	}
 
-	return nil
+	return result, nil
 }
 
 //======================================================================================================================
@@ -495,9 +483,9 @@ func (c *trClient) addTorrentMagnet(operation string) error {
 		return nil
 	}
 
-	path := c.Api.Session.DownloadDir + strings.Split(operation, "-")[1]
+	path := c.API.Session.DownloadDir + strings.Split(operation, "-")[1]
 
-	res, err := c.Api.AddTorrent(transmission.AddTorrentArg{
+	res, err := c.API.AddTorrent(transmission.AddTorrentArg{
 		DownloadDir: path,
 		Filename:    MAGNET,
 		Paused:      false,
@@ -618,12 +606,12 @@ func (c *trClient) removeTorrent(hash string, messageID int, what string) error 
 	whatS := strings.Split(what, "-")[1]
 	switch whatS {
 	case "yes":
-		err := c.Api.RemoveTorrents([]*transmission.Torrent{TORRENT}, false)
+		err := c.API.RemoveTorrents([]*transmission.Torrent{TORRENT}, false)
 		if err != nil {
 			return err
 		}
 	case "yes+data":
-		err := c.Api.RemoveTorrents([]*transmission.Torrent{TORRENT}, true)
+		err := c.API.RemoveTorrents([]*transmission.Torrent{TORRENT}, true)
 		if err != nil {
 			return err
 		}
@@ -672,22 +660,22 @@ func (c *trClient) queueTorrent(hash string, messageID int, what string) error {
 	whatS := strings.Split(what, "-")[1]
 	switch whatS {
 	case "top":
-		err := c.Api.QueueMoveTop([]*transmission.Torrent{TORRENT})
+		err := c.API.QueueMoveTop([]*transmission.Torrent{TORRENT})
 		if err != nil {
 			return err
 		}
 	case "up":
-		err := c.Api.QueueMoveUp([]*transmission.Torrent{TORRENT})
+		err := c.API.QueueMoveUp([]*transmission.Torrent{TORRENT})
 		if err != nil {
 			return err
 		}
 	case "down":
-		err := c.Api.QueueMoveDown([]*transmission.Torrent{TORRENT})
+		err := c.API.QueueMoveDown([]*transmission.Torrent{TORRENT})
 		if err != nil {
 			return err
 		}
 	case "bottom":
-		err := c.Api.QueueMoveBottom([]*transmission.Torrent{TORRENT})
+		err := c.API.QueueMoveBottom([]*transmission.Torrent{TORRENT})
 		if err != nil {
 			return err
 		}
@@ -828,11 +816,11 @@ func (c *trClient) addTorrentFile(operation string) error {
 		return nil
 	}
 
-	path := c.Api.Session.DownloadDir + strings.Split(operation, "-")[1]
+	path := c.API.Session.DownloadDir + strings.Split(operation, "-")[1]
 
 	base64Str := base64.StdEncoding.EncodeToString(TFILE)
 
-	res, err := c.Api.AddTorrent(transmission.AddTorrentArg{
+	res, err := c.API.AddTorrent(transmission.AddTorrentArg{
 		DownloadDir: path,
 		Metainfo:    base64Str,
 		Paused:      false,
@@ -882,7 +870,7 @@ func (c *trClient) startCacheUpdater(ctx context.Context, interval time.Duration
 }
 
 func (c *trClient) updateCache(ctx context.Context, gCtx *GlobalContext) error {
-	tMap, err := c.Api.GetTorrentMap()
+	tMap, err := c.API.GetTorrentMap()
 	if err != nil {
 		return fmt.Errorf("updateCache: fetch: %w", err)
 	}

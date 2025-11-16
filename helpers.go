@@ -64,7 +64,7 @@ func parseStatus(s int) (string, string) {
 	return icon, status
 }
 
-func sendNewMessage(chatID int64, text string, replyMarkup *tgbotapi.InlineKeyboardMarkup) error {
+func sendNewMessage(chatID int64, text string, replyMarkup any) error {
 	if ctx.chatID == 0 {
 		return errors.New("chatID empty")
 	}
@@ -117,7 +117,6 @@ func removeMessage(chatID int64, messageID int) error {
 }
 
 func sendNewImagedMessage(chatID int64, text string, image io.Reader, replyMarkup *tgbotapi.InlineKeyboardMarkup) error {
-
 	hasher := sha1.New()
 	tmHash := strconv.Itoa(time.Now().Nanosecond())
 	hasher.Write([]byte(tmHash))
@@ -150,7 +149,6 @@ func sendNewImagedMessage(chatID int64, text string, image io.Reader, replyMarku
 
 // rutracker
 func getImgFromTrackerRutracker(url string) (string, error) {
-
 	if !strings.HasPrefix(url, "https://rutracker.org/") {
 		return "", errors.New("not a rutracker")
 	}

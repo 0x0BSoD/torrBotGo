@@ -77,7 +77,7 @@ func main() {
 	}
 	defer func() {
 		log.Info("closing transmission session")
-		err := ctx.Transmisson.Api.Session.Close()
+		err := ctx.Transmisson.API.Session.Close()
 		if err != nil {
 			log.Panic(err.Error())
 		}

@@ -7,34 +7,34 @@ import (
 )
 
 func handleCommand(upd tgbotapi.Update) {
-	ID := upd.Message.Chat.ID
-	ctx.chatID = ID
-	msg := tgbotapi.NewMessage(ID, "")
-	msg.ParseMode = "MarkdownV2"
-	var err error
-	var text string
+	ctx.chatID = upd.Message.Chat.ID
+
+	var (
+		err  error
+		text string
+		kbd  any
+	)
 
 	switch upd.Message.Command() {
 	case "help", "start":
 		text = "Telegram Bot as interface for transmission"
-		msg.ReplyMarkup = mainKbd
+		kbd = mainKbd
 	case "status":
-		text, err = ctx.Transmisson.sendStatus()
+		text, err = ctx.Transmisson.GetStatus()
+		kbd = nil
 	case "config":
-		text, err = ctx.Transmisson.sendConfig()
-		msg.ReplyMarkup = configKbd
+		text, err = ctx.Transmisson.GetConfig()
+		kbd = &configKbd
 	default:
-		sendError("I don't know that command. handleCommand")
+		sendError("I don't know that command.")
 		return
 	}
-
-	msg.Text = text
 
 	if err != nil {
 		sendError(err.Error())
 	} else {
-		if msg.Text != "" {
-			if _, err := ctx.Bot.Send(msg); err != nil {
+		if text != "" {
+			if err = sendNewMessage(ctx.chatID, text, kbd); err != nil {
 				log.Panic(err)
 			}
 		}

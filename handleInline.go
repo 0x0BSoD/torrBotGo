@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"strings"
 
 	glh "github.com/0x0BSoD/goLittleHelpers"
@@ -15,6 +16,7 @@ func handleInline(upd tgbotapi.Update) {
 	messageID := upd.CallbackQuery.Message.MessageID
 	ctx.chatID = upd.CallbackQuery.Message.Chat.ID
 	var err error
+	var text string
 
 	if strings.HasPrefix(upd.CallbackQuery.Data, "file+add-") {
 		err = ctx.Transmisson.addTorrentFile(upd.CallbackQuery.Data)
@@ -58,7 +60,7 @@ func handleInline(upd tgbotapi.Update) {
 		case "prior-no":
 			err = ctx.Transmisson.queueTorrent(request[1], messageID, request[0])
 		case "json":
-			err = ctx.Transmisson.sendJSONConfig()
+			text, err = ctx.Transmisson.GetJSONConfig()
 		default:
 			sendError("I don't know that command, handleInline")
 			return
@@ -67,5 +69,11 @@ func handleInline(upd tgbotapi.Update) {
 
 	if err != nil {
 		sendError(err.Error())
+	} else {
+		if text != "" {
+			if err = sendNewMessage(ctx.chatID, text, nil); err != nil {
+				log.Panic(err)
+			}
+		}
 	}
 }
