@@ -221,11 +221,17 @@ const (
 	notActive
 )
 
+type filesList struct {
+	Name        string
+	Size        string
+	Downloading bool
+}
+
 //======================================================================================================================
-// GET
+// HELPERS
 //======================================================================================================================
 
-func (c *trClient) getTorrent(id int64, torr *transmission.Torrent) (string, string, error) {
+func (c *trClient) renderTorrent(torr *transmission.Torrent) (string, string, error) {
 	t, err := template.ParseFiles(ctx.wd + "templates/torrentListItem.gotmpl")
 	if err != nil {
 		return "", "", err
@@ -250,42 +256,7 @@ func (c *trClient) getTorrent(id int64, torr *transmission.Torrent) (string, str
 	return torr.HashString, dRes.String(), nil
 }
 
-func (c *trClient) GetTorrents(sf showFilter) (map[string]string, error) {
-	items, _ := ctx.TorrentCache.Snapshot()
-
-	result := make(map[string]string)
-
-	for _, i := range items {
-		switch sf {
-		case all:
-			hash, text, err := c.getTorrent(ctx.chatID, i)
-			if err != nil {
-				return nil, err
-			}
-			result[hash] = text
-		case active:
-			if i.Status != transmission.StatusStopped && i.ErrorString == "" {
-				hash, text, err := c.getTorrent(ctx.chatID, i)
-				if err != nil {
-					return nil, err
-				}
-				result[hash] = text
-			}
-		case notActive:
-			if i.Status == transmission.StatusStopped {
-				hash, text, err := c.getTorrent(ctx.chatID, i)
-				if err != nil {
-					return nil, err
-				}
-				result[hash] = text
-			}
-		}
-	}
-
-	return result, nil
-}
-
-func (c *trClient) getTorrentDetails(hash string) (string, error) {
+func (c *trClient) details(hash string) (string, error) {
 	var ok bool
 	if TORRENT, ok = ctx.TorrentCache.GetByHash(hash); ok {
 		var active bool
@@ -333,16 +304,49 @@ func (c *trClient) getTorrentDetails(hash string) (string, error) {
 	return "", errors.New("torrent not found")
 }
 
-type filesList struct {
-	Name        string
-	Size        string
-	Downloading bool
+//======================================================================================================================
+// GET
+//======================================================================================================================
+
+func (c *trClient) Torrents(sf showFilter) (map[string]string, error) {
+	items, _ := ctx.TorrentCache.Snapshot()
+
+	result := make(map[string]string)
+
+	for _, i := range items {
+		switch sf {
+		case all:
+			hash, text, err := c.renderTorrent(i)
+			if err != nil {
+				return nil, err
+			}
+			result[hash] = text
+		case active:
+			if i.Status != transmission.StatusStopped && i.ErrorString == "" {
+				hash, text, err := c.renderTorrent(i)
+				if err != nil {
+					return nil, err
+				}
+				result[hash] = text
+			}
+		case notActive:
+			if i.Status == transmission.StatusStopped {
+				hash, text, err := c.renderTorrent(i)
+				if err != nil {
+					return nil, err
+				}
+				result[hash] = text
+			}
+		}
+	}
+
+	return result, nil
 }
 
 func (c *trClient) sendTorrentDetails(hash string, messageID int, md5SumOld string) error {
 	c.updateCache(context.TODO(), &ctx)
 
-	t, err := c.getTorrentDetails(hash)
+	t, err := c.details(hash)
 	if err != nil {
 		return err
 	}
@@ -364,7 +368,7 @@ func (c *trClient) sendTorrentDetails(hash string, messageID int, md5SumOld stri
 
 func (c *trClient) sendTorrentDetailsByID(torrentID int64) error {
 	hash, _ := ctx.TorrentCache.GetHash((int(torrentID)))
-	t, err := c.getTorrentDetails(hash)
+	t, err := c.details(hash)
 	if err != nil {
 		return err
 	}
@@ -382,8 +386,7 @@ func (c *trClient) sendTorrentFiles(hash string) error {
 	files := *t.Files
 	filesStats := *t.FileStats
 
-	for i := 0; i < len(files); i++ {
-
+	for i := range len(files) {
 		msg := tgbotapi.NewMessage(ctx.chatID, "")
 		msg.ParseMode = "MarkdownV2"
 
@@ -428,7 +431,7 @@ func (c *trClient) SearchTorrent(text string) (map[string]string, error) {
 	result := make(map[string]string)
 	for _, t := range items {
 		if re.Match([]byte(t.Name)) {
-			hash, text, err := c.getTorrent(ctx.chatID, t)
+			hash, text, err := c.renderTorrent(t)
 			if err != nil {
 				return nil, err
 			}
@@ -446,7 +449,7 @@ func (c *trClient) SearchTorrent(text string) (map[string]string, error) {
 func (c *trClient) addTorrentMagnetQuestion(text string, messageID int) error {
 	var name string
 	var trackers []string
-	for _, i := range strings.Split(text, "&") {
+	for i := range strings.SplitSeq(text, "&") {
 		decoded, err := url.QueryUnescape(i)
 		if err != nil {
 			return err
@@ -513,7 +516,7 @@ func (c *trClient) addTorrentMagnet(operation string) error {
 
 func (c *trClient) stopTorrent(hash string, messageID int, md5SumOld string) error {
 	if TORRENT == nil {
-		_, err := c.getTorrentDetails(hash)
+		_, err := c.details(hash)
 		if err != nil {
 			return err
 		}
@@ -529,7 +532,7 @@ func (c *trClient) stopTorrent(hash string, messageID int, md5SumOld string) err
 
 	c.updateCache(context.TODO(), &ctx)
 
-	t, err := c.getTorrentDetails(hash)
+	t, err := c.details(hash)
 	if err != nil {
 		return err
 	}
@@ -551,7 +554,7 @@ func (c *trClient) stopTorrent(hash string, messageID int, md5SumOld string) err
 
 func (c *trClient) startTorrent(hash string, messageID int, md5SumOld string) error {
 	if TORRENT == nil {
-		_, err := c.getTorrentDetails(hash)
+		_, err := c.details(hash)
 		if err != nil {
 			return err
 		}
@@ -567,7 +570,7 @@ func (c *trClient) startTorrent(hash string, messageID int, md5SumOld string) er
 
 	c.updateCache(context.TODO(), &ctx)
 
-	t, err := c.getTorrentDetails(hash)
+	t, err := c.details(hash)
 	if err != nil {
 		return err
 	}
@@ -588,7 +591,7 @@ func (c *trClient) startTorrent(hash string, messageID int, md5SumOld string) er
 }
 
 func (c *trClient) removeTorrentQuestion(hash string, messageID int) error {
-	msgTxt, err := c.getTorrentDetails(hash)
+	msgTxt, err := c.details(hash)
 	if err != nil {
 		return err
 	}
@@ -616,7 +619,7 @@ func (c *trClient) removeTorrent(hash string, messageID int, what string) error 
 			return err
 		}
 	case "no":
-		msgTxt, err := c.getTorrentDetails(hash)
+		msgTxt, err := c.details(hash)
 		if err != nil {
 			return err
 		}
@@ -642,7 +645,7 @@ func (c *trClient) removeTorrent(hash string, messageID int, what string) error 
 }
 
 func (c *trClient) queueTorrentQuestion(hash string, messageID int) error {
-	msgTxt, err := c.getTorrentDetails(hash)
+	msgTxt, err := c.details(hash)
 	if err != nil {
 		return err
 	}
@@ -685,7 +688,7 @@ func (c *trClient) queueTorrent(hash string, messageID int, what string) error {
 		return fmt.Errorf("nope, failed")
 	}
 
-	msgTxt, err := c.getTorrentDetails(hash)
+	msgTxt, err := c.details(hash)
 	if err != nil {
 		return err
 	}
