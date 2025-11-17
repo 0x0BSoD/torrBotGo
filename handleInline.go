@@ -15,8 +15,12 @@ func handleInline(upd tgbotapi.Update) {
 
 	messageID := upd.CallbackQuery.Message.MessageID
 	ctx.chatID = upd.CallbackQuery.Message.Chat.ID
-	var err error
-	var text string
+	var (
+		err         error
+		text        string
+		updated     string
+		replyMarkup tgbotapi.InlineKeyboardMarkup
+	)
 
 	if strings.HasPrefix(upd.CallbackQuery.Data, "file+add-") {
 		err = ctx.Transmisson.addTorrentFile(upd.CallbackQuery.Data)
@@ -27,12 +31,12 @@ func handleInline(upd tgbotapi.Update) {
 	}
 
 	if strings.Contains(upd.CallbackQuery.Data, "_") {
-		t := strings.ReplaceAll(strings.ReplaceAll(upd.CallbackQuery.Message.Text, "`", ""), "\n", "")
-
+		tHash := glh.GetMD5Hash(strings.ReplaceAll(strings.ReplaceAll(upd.CallbackQuery.Message.Text, "`", ""), "\n", ""))
 		request := strings.Split(upd.CallbackQuery.Data, "_")
 		switch request[0] {
 		case "open", "update":
-			err = ctx.Transmisson.sendTorrentDetails(request[1], messageID, glh.GetMD5Hash(t))
+			updated, err = ctx.Transmisson.TorrentDetails(request[1], messageID, tHash)
+			replyMarkup = torrentDetailKbd(request[1], TORRENT.Status)
 		case "delete":
 			err = ctx.Transmisson.removeTorrentQuestion(request[1], messageID)
 		case "delete-yes":
@@ -44,9 +48,9 @@ func handleInline(upd tgbotapi.Update) {
 		case "files":
 			err = ctx.Transmisson.sendTorrentFiles(request[1])
 		case "stop":
-			err = ctx.Transmisson.stopTorrent(request[1], messageID, glh.GetMD5Hash(t))
+			err = ctx.Transmisson.stopTorrent(request[1], messageID, tHash)
 		case "start":
-			err = ctx.Transmisson.startTorrent(request[1], messageID, glh.GetMD5Hash(t))
+			err = ctx.Transmisson.startTorrent(request[1], messageID, tHash)
 		case "priority":
 			err = ctx.Transmisson.queueTorrentQuestion(request[1], messageID)
 		case "prior-top":
@@ -72,6 +76,11 @@ func handleInline(upd tgbotapi.Update) {
 	} else {
 		if text != "" {
 			if err = sendNewMessage(ctx.chatID, text, nil); err != nil {
+				log.Panic(err)
+			}
+		}
+		if updated != "" {
+			if err = sendEditedMessage(ctx.chatID, messageID, text, &replyMarkup); err != nil {
 				log.Panic(err)
 			}
 		}

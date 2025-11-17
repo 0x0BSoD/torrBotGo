@@ -343,42 +343,30 @@ func (c *trClient) Torrents(sf showFilter) (map[string]string, error) {
 	return result, nil
 }
 
-func (c *trClient) sendTorrentDetails(hash string, messageID int, md5SumOld string) error {
+func (c *trClient) TorrentDetails(hash string, messageID int, md5SumOld string) (string, error) {
 	c.updateCache(context.TODO(), &ctx)
 
 	t, err := c.details(hash)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	tHash := strings.ReplaceAll(strings.ReplaceAll(t, "`", ""), "\n", "")
-
-	if glh.GetMD5Hash(tHash) == md5SumOld {
-		return nil
+	tHash := glh.GetMD5Hash(strings.ReplaceAll(strings.ReplaceAll(t, "`", ""), "\n", ""))
+	if tHash == md5SumOld {
+		return "", nil
 	}
 
-	replyMarkup := torrentDetailKbd(hash, TORRENT.Status)
-	err = sendEditedMessage(ctx.chatID, messageID, t, &replyMarkup)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return t, nil
 }
 
-func (c *trClient) sendTorrentDetailsByID(torrentID int64) error {
+func (c *trClient) TorrentDetailsByID(torrentID int64) (string, string, error) {
 	hash, _ := ctx.TorrentCache.GetHash((int(torrentID)))
 	t, err := c.details(hash)
 	if err != nil {
-		return err
-	}
-	replyMarkup := torrentDetailKbd(hash, TORRENT.Status)
-	err = sendNewMessage(ctx.chatID, t, &replyMarkup)
-	if err != nil {
-		return err
+		return "", "", err
 	}
 
-	return nil
+	return hash, t, nil
 }
 
 func (c *trClient) sendTorrentFiles(hash string) error {

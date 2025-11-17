@@ -16,10 +16,15 @@ func handleMessage(upd tgbotapi.Update) {
 
 	ctx.chatID = upd.Message.Chat.ID
 
+	// If we got message that contains integer value
 	if torrentID, err := strconv.ParseInt(upd.Message.Text, 10, 64); err == nil {
-		err = ctx.Transmisson.sendTorrentDetailsByID(torrentID)
+		hash, text, err := ctx.Transmisson.TorrentDetailsByID(torrentID)
 		if err != nil {
 			sendError(err.Error())
+		}
+		replyMarkup := torrentDetailKbd(hash, TORRENT.Status)
+		if err = sendNewMessage(ctx.chatID, text, replyMarkup); err != nil {
+			log.Panic(err)
 		}
 		return
 	}
