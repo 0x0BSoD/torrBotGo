@@ -7,21 +7,19 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/0x0BSoD/torrBotGo/internal/cache"
+	tgBotAPI "github.com/0x0BSoD/telegram-bot-api"
 	"github.com/0x0BSoD/torrBotGo/internal/events"
 	intTransmission "github.com/0x0BSoD/torrBotGo/internal/transmission"
-
-	tgBotAPI "github.com/0x0BSoD/telegram-bot-api"
 	"github.com/0x0BSoD/transmission"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 )
 
 type Config struct {
-	Logger       *zap.Logger
-	TorrentCache *cache.Torrents
-	EventBus     *events.Bus
-	App          struct {
+	Logger   *zap.Logger
+	EventBus *events.Bus
+
+	App struct {
 		ErrorMedia     string `yaml:"error_media"`
 		AutoCategories bool   `yaml:"auto_categories"`
 		Dirs           struct {
@@ -31,10 +29,12 @@ type Config struct {
 			Categories map[string]string `yaml:"categories"`
 		} `yaml:"dirs"`
 	} `yaml:"app"`
+
 	Telegram struct {
 		Client *tgBotAPI.BotAPI
 		Token  string `yaml:"token"`
 	} `yaml:"telegram"`
+
 	Transmission struct {
 		Config struct {
 			URI      string `yaml:"uri"`
