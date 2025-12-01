@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/0x0BSoD/torrBotGo/internal/cache"
@@ -21,12 +22,12 @@ type Config struct {
 	TorrentCache *cache.Torrents
 	EventBus     *events.Bus
 	App          struct {
-		Debug      bool   `yaml:"debug"`
-		ErrorMedia string `yaml:"error_media"`
-		Dirs       struct {
+		ErrorMedia     string `yaml:"error_media"`
+		AutoCategories bool   `yaml:"auto_categories"`
+		Dirs           struct {
 			Images     string            `yaml:"images"`
 			Working    string            `yaml:"working"`
-			Download   string            `yaml:"default_download_dir"`
+			Download   string            `yaml:"download"`
 			Categories map[string]string `yaml:"categories"`
 		} `yaml:"dirs"`
 	} `yaml:"app"`
@@ -35,16 +36,14 @@ type Config struct {
 		Token  string `yaml:"token"`
 	} `yaml:"telegram"`
 	Transmission struct {
-		Config trConfig                    `yaml:"config"`
-		Custom transmission.SetSessionArgs `yaml:"custom"`
+		Config struct {
+			URI      string `yaml:"uri"`
+			User     string `yaml:"user"`
+			Password string `yaml:"password"`
+		} `yaml:"config"`
+		Custom transmission.SetSessionArgs `yaml:"custom,omitempty"`
 		Client *intTransmission.Client
 	} `yaml:"transmission"`
-}
-
-type trConfig struct {
-	URI      string `yaml:"uri"`
-	User     string `yaml:"user"`
-	Password string `yaml:"password"`
 }
 
 func New(path string) (Config, error) {
@@ -78,8 +77,9 @@ func New(path string) (Config, error) {
 	}
 
 	for _, d := range result.App.Dirs.Categories {
-		if _, err := os.Stat(result.App.Dirs.Download + d); os.IsNotExist(err) {
-			err = os.MkdirAll(result.App.Dirs.Download+d, 0o755)
+		path := filepath.Join(result.App.Dirs.Download, d)
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			err = os.MkdirAll(path, 0o755)
 			if err != nil {
 				return Config{}, fmt.Errorf("can't create directory, %w", err)
 			}
@@ -95,10 +95,4 @@ func New(path string) (Config, error) {
 	}
 
 	return result, nil
-}
-
-func configClients(config *Config) error {
-	fmt.Println("FooBar")
-
-	return nil
 }
