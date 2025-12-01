@@ -1,40 +1,50 @@
-/*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-
-*/
 package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
+	"go.uber.org/zap/zapcore"
+
+	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
+	"github.com/0x0BSoD/torrBotGo/config"
+	"github.com/0x0BSoD/torrBotGo/internal/events"
+	"github.com/0x0BSoD/torrBotGo/pkg/logger"
 )
 
-// serveCmd represents the serve command
+var configPath string
+
 var serveCmd = &cobra.Command{
 	Use:   "serve",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("serve called")
-	},
+	Short: "Start Bot",
+	Long:  `Start Bot`,
+	Run:   serve,
 }
 
 func init() {
 	rootCmd.AddCommand(serveCmd)
 
-	// Here you will define your flags and configuration settings.
+	serveCmd.Flags().StringVarP(&configPath, "config", "c", "./config.yaml", "Path to YAML config")
+}
 
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// serveCmd.PersistentFlags().String("foo", "", "A help for foo")
+func serve(cmd *cobra.Command, args []string) {
+	config, err := config.New(configPath)
+	if err != nil {
+		fmt.Println(fmt.Errorf("unable to create a config: %v", err))
+		os.Exit(1)
+	}
 
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// serveCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	config.EventBus = events.New(100)
+	config.Logger = logger.New(zapcore.DebugLevel)
+
+	config.Logger.Info("creating Telegram API client")
+	b, err := tgbotapi.NewBotAPI(config.Telegram.Token)
+	if err != nil {
+		config.Logger.Sugar().Errorf("can't create Telegram API client: %w", err)
+		os.Exit(1)
+	}
+	config.Telegram.Client = b
+
+	fmt.Println(config)
 }

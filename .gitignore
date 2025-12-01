@@ -1,6 +1,8 @@
-.idea/
-build/
-.vscode/
-config.json
 .DS_Store
+.idea/
+.vscode/
+build/
 docker/
+tmp/
+test_config.yaml
+torrBotGo
