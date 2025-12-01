@@ -8,10 +8,9 @@ import (
 	"github.com/spf13/cobra"
 	"go.uber.org/zap/zapcore"
 
-	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
-
 	"github.com/0x0BSoD/torrBotGo/config"
 	"github.com/0x0BSoD/torrBotGo/internal/events"
+	"github.com/0x0BSoD/torrBotGo/internal/telegram"
 	"github.com/0x0BSoD/torrBotGo/internal/transmission"
 	"github.com/0x0BSoD/torrBotGo/pkg/logger"
 )
@@ -42,12 +41,12 @@ func serve(cmd *cobra.Command, args []string) {
 	config.Logger = logger.New(zapcore.DebugLevel)
 
 	config.Logger.Info("creating Telegram API client")
-	b, err := tgbotapi.NewBotAPI(config.Telegram.Token)
+	tgClient, err := telegram.New(config.Telegram.Token, config.Logger)
 	if err != nil {
 		config.Logger.Sugar().Errorf("can't create Telegram API client: %w", err)
 		os.Exit(1)
 	}
-	config.Telegram.Client = b
+	config.Telegram.Client = tgClient
 
 	config.Logger.Info("connecting to transmission API")
 	trCfg := transmission.Config{

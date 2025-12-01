@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	tgBotAPI "github.com/0x0BSoD/telegram-bot-api"
 	"github.com/0x0BSoD/torrBotGo/internal/events"
+	"github.com/0x0BSoD/torrBotGo/internal/telegram"
 	intTransmission "github.com/0x0BSoD/torrBotGo/internal/transmission"
 	"github.com/0x0BSoD/transmission"
 	"go.uber.org/zap"
@@ -31,7 +31,7 @@ type Config struct {
 	} `yaml:"app"`
 
 	Telegram struct {
-		Client *tgBotAPI.BotAPI
+		Client *telegram.Client
 		Token  string `yaml:"token"`
 	} `yaml:"telegram"`
 
