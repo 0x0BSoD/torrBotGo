@@ -1,6 +1,5 @@
 .idea/
 build/
-config/
 .vscode/
 config.json
 .DS_Store
