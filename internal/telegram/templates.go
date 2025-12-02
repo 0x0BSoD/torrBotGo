@@ -1,10 +1,28 @@
 package telegram
 
-import "strings"
+import (
+	"strings"
+	"text/template"
+)
 
-func TmplConfig() string {
+func TmplStatus() *template.Template {
 	lines := []string{
-		"{{- /*gotype: github.com/0x0BSoD/transmissionTG.sessConfig*/ -}}",
+		"Free Space: `{{ .FreeSpace }}`",
+		"Current:",
+		"`▶️ Active: {{ .Active }} || ⏸️ Paused: {{ .Paused }}`",
+		"`⬇️ Downloading: {{ .DownloadS }} || ⬆️ Uploading: {{ .UploadS }}`",
+		"`⬇️ Downloaded: {{ .Downloaded }} || ⬆️ Uploaded: {{ .Uploaded }}`",
+	}
+
+	result := template.Must(
+		template.New("status").
+			Parse(strings.Join(lines, "\n")))
+
+	return result
+}
+
+func TmplConfig() *template.Template {
+	lines := []string{
 		"Default download dir: `{{ .DownloadDir }}`",
 		"Start download after add: {{if .StartAdded}} ✔️ {{else}} ❌ {{end}}",
 		"{{if .DownloadQEn}}Download Queue size: {{.DownloadQSize}} {{end}}",
@@ -12,5 +30,9 @@ func TmplConfig() string {
 		"{{if .SpeedLimitUEn}}Upload speed limit:  ✔️ Limit: {{.SpeedLimitU}} {{else}}Upload speed limit: ❌ {{end}}",
 	}
 
-	return strings.Join(lines, "\n")
+	result := template.Must(
+		template.New("sessConfig").
+			Parse(strings.Join(lines, "\n")))
+
+	return result
 }

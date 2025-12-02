@@ -27,7 +27,7 @@ func StartUpdateParser(ctx context.Context, cfg *config.Config, interval time.Du
 			return nil
 		case upd := <-updates:
 			if upd.Message.IsCommand() {
-				handleCommand(upd, cfg.Telegram.Client, cfg.Logger)
+				handleCommand(upd, cfg.Telegram.Client, cfg.Transmission.Client, cfg.Logger)
 			}
 		}
 	}
