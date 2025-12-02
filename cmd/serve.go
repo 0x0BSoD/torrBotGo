@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/zap/zapcore"
 
 	"github.com/0x0BSoD/torrBotGo/config"
+	"github.com/0x0BSoD/torrBotGo/internal/app"
 	"github.com/0x0BSoD/torrBotGo/internal/events"
 	"github.com/0x0BSoD/torrBotGo/internal/telegram"
 	"github.com/0x0BSoD/torrBotGo/internal/transmission"
@@ -41,7 +43,8 @@ func serve(cmd *cobra.Command, args []string) {
 	config.Logger = logger.New(zapcore.DebugLevel)
 
 	config.Logger.Info("creating Telegram API client")
-	tgClient, err := telegram.New(config.Telegram.Token, config.Logger)
+	errorMediaPath := filepath.Join(config.App.Dirs.Working, config.App.ErrorMedia)
+	tgClient, err := telegram.New(config.Telegram.Token, errorMediaPath, config.Logger)
 	if err != nil {
 		config.Logger.Sugar().Errorf("can't create Telegram API client: %w", err)
 		os.Exit(1)
@@ -69,9 +72,11 @@ func serve(cmd *cobra.Command, args []string) {
 	config.Transmission.Client = trClient
 
 	config.Logger.Info("starting Event Bus")
-	busCtx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	busCtx, busCancel := context.WithCancel(context.Background())
+	defer busCancel()
 	go config.EventBus.Run(busCtx)
 
-	fmt.Println(config)
+	prsrCtx, prsrCancel := context.WithCancel(context.Background())
+	defer prsrCancel()
+	app.StartUpdateParser(prsrCtx, &config, 60)
 }
