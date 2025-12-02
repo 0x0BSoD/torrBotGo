@@ -10,6 +10,7 @@ require (
 )
 
 require (
+	github.com/0x0BSoD/goLittleHelpers v0.0.0-20200315190213-58216cbcb550
 	github.com/0x0BSoD/telegram-bot-api v4.6.4+incompatible
 	github.com/0x0BSoD/transmission v0.0.0-20251019202831-080bd75d7a13
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect

@@ -1,3 +1,5 @@
+github.com/0x0BSoD/goLittleHelpers v0.0.0-20200315190213-58216cbcb550 h1:hbdHE8hm3QLfGs2gtBxajj3joZYzC3vaE2U7X9EuNQo=
+github.com/0x0BSoD/goLittleHelpers v0.0.0-20200315190213-58216cbcb550/go.mod h1:YCs0RIipKPgKhYuQFnGixaoo/0rJaJHUA86kM6XquUM=
 github.com/0x0BSoD/telegram-bot-api v4.6.4+incompatible h1:34e8qyY0gssCuCd/OTkSsX0NdAT9Rif8He7PxwCMM0M=
 github.com/0x0BSoD/telegram-bot-api v4.6.4+incompatible/go.mod h1:YdFTY4Cp2uQHCHchqwW120Kc4MW1KY5fte95RDB5RoA=
 github.com/0x0BSoD/transmission v0.0.0-20251019202831-080bd75d7a13 h1:56SMMpAXUuosCPChorfatZ7Az4GOqN1O0pQR04MgcwQ=
