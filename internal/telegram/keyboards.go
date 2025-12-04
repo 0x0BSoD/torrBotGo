@@ -9,3 +9,9 @@ var MainKeyboard = tgbotapi.NewReplyKeyboard(
 		tgbotapi.NewKeyboardButton("Not Active torrents"),
 	),
 )
+
+var ConfigKbd = tgbotapi.NewInlineKeyboardMarkup(
+	tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData("Show full config as JSON", "json_show"),
+	),
+)

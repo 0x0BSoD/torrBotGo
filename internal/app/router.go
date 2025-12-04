@@ -26,8 +26,13 @@ func StartUpdateParser(ctx context.Context, cfg *config.Config, interval time.Du
 		case <-ctx.Done():
 			return nil
 		case upd := <-updates:
-			if upd.Message.IsCommand() {
+			switch {
+			case upd.Message == nil:
+				HandleInline(upd, cfg.Telegram.Client, cfg.Transmission.Client, cfg.Logger)
+			case upd.Message.IsCommand():
 				handleCommand(upd, cfg.Telegram.Client, cfg.Transmission.Client, cfg.Logger)
+			default:
+				cfg.Logger.Sugar().Warnf("text message: %v", upd)
 			}
 		}
 	}
