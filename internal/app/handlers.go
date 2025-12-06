@@ -92,34 +92,60 @@ func handleInline(update tgbotapi.Update, tClient *telegram.Client, trClient *tr
 
 func handleMessage(update tgbotapi.Update, tClient *telegram.Client, trClient *transmission.Client, logger *zap.Logger) {
 	chatID := update.Message.Chat.ID
-	torrents, err := trClient.Torrents(update.Message.Text)
-	if err != nil {
-		if errors.Is(err, transmission.ErrorFilterNotFound) {
-			tClient.SendError(chatID, "I don't know that command. handleMessage")
+
+	if update.Message.Document != nil {
+		_url, err := tClient.BotAPI.GetFileDirectURL(update.Message.Document.FileID)
+		if err != nil {
+			tClient.SendError(chatID, fmt.Sprintf("get file URL failed, %v", err))
 			return
 		}
-		tClient.SendError(chatID, fmt.Sprintf("get torrents failed, %v", err))
-		return
-	}
-
-	if len(torrents) == 0 {
-		if err := tClient.SendMessage(chatID, "Noting to show", nil); err != nil {
+		title, imgPath, err := trClient.AddTorrentByFileDialog(_url)
+		if err != nil {
+			tClient.SendError(chatID, fmt.Sprintf("add torrent by file failed, %v", err))
+			return
+		}
+		kbdAdd := telegram.TorrentAddKbd(true, trClient.Categories)
+		if imgPath != "" {
+			if err := tClient.SendImagedMessage(chatID, title, imgPath, kbdAdd); err != nil {
+				tClient.SendError(chatID, fmt.Sprintf("send failed, %v", err))
+				return
+			}
+			return
+		}
+		if err := tClient.SendMessage(chatID, title, kbdAdd); err != nil {
 			tClient.SendError(chatID, fmt.Sprintf("send failed, %v", err))
 			return
 		}
-	}
-
-	for hash, torrent := range torrents {
-		text, err := renderTorrent(torrent)
+	} else {
+		torrents, err := trClient.Torrents(update.Message.Text)
 		if err != nil {
-			tClient.SendError(chatID, fmt.Sprintf("render torrent template failed, %v", err))
+			if errors.Is(err, transmission.ErrorFilterNotFound) {
+				tClient.SendError(chatID, "I don't know that command. handleMessage")
+				return
+			}
+			tClient.SendError(chatID, fmt.Sprintf("get torrents failed, %v", err))
 			return
 		}
-		replyMarkup := telegram.TorrentKbd(hash)
 
-		if err := tClient.SendMessage(chatID, text, replyMarkup); err != nil {
-			tClient.SendError(chatID, fmt.Sprintf("send torrent item failed, %v", err))
-			return
+		if len(torrents) == 0 {
+			if err := tClient.SendMessage(chatID, "Noting to show", nil); err != nil {
+				tClient.SendError(chatID, fmt.Sprintf("send failed, %v", err))
+				return
+			}
+		}
+
+		for hash, torrent := range torrents {
+			text, err := renderTorrent(torrent)
+			if err != nil {
+				tClient.SendError(chatID, fmt.Sprintf("render torrent template failed, %v", err))
+				return
+			}
+			replyMarkup := telegram.TorrentKbd(hash)
+
+			if err := tClient.SendMessage(chatID, text, replyMarkup); err != nil {
+				tClient.SendError(chatID, fmt.Sprintf("send torrent item failed, %v", err))
+				return
+			}
 		}
 	}
 }

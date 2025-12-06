@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -44,8 +43,7 @@ func serve(cmd *cobra.Command, args []string) {
 	config.Logger = logger.New(zapcore.DebugLevel)
 
 	config.Logger.Info("creating Telegram API client")
-	errorMediaPath := filepath.Join(config.App.Dirs.Working, config.App.ErrorMedia)
-	tgClient, err := telegram.New(config.Telegram.Token, errorMediaPath, config.Logger)
+	tgClient, err := telegram.New(config.Telegram.Token, config.App.Dirs.Images, config.App.ErrorMedia, config.Logger)
 	if err != nil {
 		config.Logger.Sugar().Errorf("can't create Telegram API client: %w", err)
 		os.Exit(1)
@@ -54,12 +52,14 @@ func serve(cmd *cobra.Command, args []string) {
 
 	config.Logger.Info("connecting to transmission API")
 	trCfg := transmission.Config{
-		URI:      config.Transmission.Config.URI,
-		User:     config.Transmission.Config.User,
-		Password: config.Transmission.Config.Password,
-		Custom:   config.Transmission.Custom,
-		Logger:   config.Logger,
-		EventBus: config.EventBus,
+		URI:        config.Transmission.Config.URI,
+		User:       config.Transmission.Config.User,
+		Password:   config.Transmission.Config.Password,
+		Custom:     config.Transmission.Custom,
+		Logger:     config.Logger,
+		EventBus:   config.EventBus,
+		Categories: config.App.Dirs.Categories,
+		MediaPath:  config.App.Dirs.Images,
 	}
 	trClient, err := transmission.New(&trCfg)
 	if err != nil {

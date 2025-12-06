@@ -14,11 +14,13 @@ import (
 )
 
 type Client struct {
-	API      *transmission.Client
-	logger   *zap.Logger
-	eventBus *events.Bus
-	cache    *cache.Torrents
-	Storage  struct {
+	API        *transmission.Client
+	Categories map[string]string
+	logger     *zap.Logger
+	eventBus   *events.Bus
+	cache      *cache.Torrents
+	mediaPath  string
+	Storage    struct {
 		Torrent    *transmission.Torrent
 		tFile      []byte
 		magentLink string
@@ -27,12 +29,14 @@ type Client struct {
 }
 
 type Config struct {
-	URI      string
-	User     string
-	Password string
-	EventBus *events.Bus
-	Logger   *zap.Logger
-	Custom   transmission.SetSessionArgs
+	URI        string
+	User       string
+	Password   string
+	EventBus   *events.Bus
+	Logger     *zap.Logger
+	Categories map[string]string
+	MediaPath  string
+	Custom     transmission.SetSessionArgs
 }
 
 type Status struct {
@@ -95,6 +99,8 @@ func New(cfg *Config) (*Client, error) {
 	result.logger = cfg.Logger
 	result.eventBus = cfg.EventBus
 	result.cache = cache.New(tMap)
+	result.Categories = cfg.Categories
+	result.mediaPath = cfg.MediaPath
 
 	cfg.Logger.Info("updating transmission session info ")
 	err = t.Session.Update()

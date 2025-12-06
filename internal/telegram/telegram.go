@@ -11,10 +11,11 @@ import (
 type Client struct {
 	BotAPI         *tgbotapi.BotAPI
 	errorMediaPath string
+	mediaPath      string
 	logger         *zap.Logger
 }
 
-func New(token string, errorMediaPath string, log *zap.Logger) (*Client, error) {
+func New(token, mediaPath, errorMediaPath string, log *zap.Logger) (*Client, error) {
 	b, err := tgbotapi.NewBotAPI(token)
 	if err != nil {
 		return nil, err
@@ -24,6 +25,7 @@ func New(token string, errorMediaPath string, log *zap.Logger) (*Client, error) 
 	result.BotAPI = b
 	result.logger = log
 	result.errorMediaPath = errorMediaPath
+	result.mediaPath = mediaPath
 
 	return &result, nil
 }
@@ -45,6 +47,22 @@ func (c *Client) SendMessage(chatID int64, text string, replyMarkup any) error {
 	}
 
 	c.logger.Info("send message to telegram")
+	if _, err := c.BotAPI.Send(msg); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Client) SendImagedMessage(chatID int64, text string, imgPath, replyMarkup any) error {
+	msg := tgbotapi.NewPhotoUpload(chatID, imgPath)
+	msg.ParseMode = "MarkdownV2"
+
+	if replyMarkup != nil {
+		msg.ReplyMarkup = replyMarkup
+	}
+
+	msg.Caption = escapeAll(text)
 	if _, err := c.BotAPI.Send(msg); err != nil {
 		return err
 	}
