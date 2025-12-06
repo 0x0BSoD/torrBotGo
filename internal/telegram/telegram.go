@@ -13,6 +13,9 @@ type Client struct {
 	errorMediaPath string
 	mediaPath      string
 	logger         *zap.Logger
+	storage        struct {
+		chatID int64
+	}
 }
 
 func New(token, mediaPath, errorMediaPath string, log *zap.Logger) (*Client, error) {
@@ -30,8 +33,12 @@ func New(token, mediaPath, errorMediaPath string, log *zap.Logger) (*Client, err
 	return &result, nil
 }
 
-func (c *Client) SendMessage(chatID int64, text string, replyMarkup any) error {
-	if chatID == 0 {
+func (c *Client) SetChatID(chatID int64) {
+	c.storage.chatID = chatID
+}
+
+func (c *Client) SendMessage(text string, replyMarkup any) error {
+	if c.storage.chatID == 0 {
 		return errors.New("chatID is empty")
 	}
 
@@ -39,7 +46,7 @@ func (c *Client) SendMessage(chatID int64, text string, replyMarkup any) error {
 		return fmt.Errorf("message cannot be empty")
 	}
 
-	msg := tgbotapi.NewMessage(chatID, escapeAll(text))
+	msg := tgbotapi.NewMessage(c.storage.chatID, escapeAll(text))
 	msg.ParseMode = "MarkdownV2"
 
 	if replyMarkup != nil {
@@ -54,8 +61,8 @@ func (c *Client) SendMessage(chatID int64, text string, replyMarkup any) error {
 	return nil
 }
 
-func (c *Client) SendImagedMessage(chatID int64, text string, imgPath, replyMarkup any) error {
-	msg := tgbotapi.NewPhotoUpload(chatID, imgPath)
+func (c *Client) SendImagedMessage(text string, imgPath, replyMarkup any) error {
+	msg := tgbotapi.NewPhotoUpload(c.storage.chatID, imgPath)
 	msg.ParseMode = "MarkdownV2"
 
 	if replyMarkup != nil {
@@ -70,13 +77,13 @@ func (c *Client) SendImagedMessage(chatID int64, text string, imgPath, replyMark
 	return nil
 }
 
-func (c *Client) SendError(chatID int64, text string) {
-	if chatID == 0 {
+func (c *Client) SendError(text string) {
+	if c.storage.chatID == 0 {
 		c.logger.Sugar().Errorf("chatID empty, %s", text)
 		return
 	}
 
-	msg := tgbotapi.NewPhotoUpload(chatID, c.errorMediaPath)
+	msg := tgbotapi.NewPhotoUpload(c.storage.chatID, c.errorMediaPath)
 	msg.Caption = text
 
 	if _, err := c.BotAPI.Send(msg); err != nil {
@@ -84,8 +91,8 @@ func (c *Client) SendError(chatID int64, text string) {
 	}
 }
 
-func (c *Client) RemoveMessage(chatID int64, messageID int) error {
-	msgRm := tgbotapi.NewDeleteMessage(chatID, messageID)
+func (c *Client) RemoveMessage(messageID int) error {
+	msgRm := tgbotapi.NewDeleteMessage(c.storage.chatID, messageID)
 
 	if _, err := c.BotAPI.Send(msgRm); err != nil {
 		return err

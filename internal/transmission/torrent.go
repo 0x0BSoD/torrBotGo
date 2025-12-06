@@ -72,13 +72,13 @@ func (c *Client) AddTorrentByFileDialog(directURL string) (string, string, error
 	}
 	defer resp.Body.Close()
 
-	c.Storage.tFile, err = io.ReadAll(resp.Body)
+	c.storage.tFile, err = io.ReadAll(resp.Body)
 	if err != nil {
 		return "", "", err
 	}
 
 	bto := bencodeTorrent{}
-	err = bencode.Unmarshal(bytes.NewReader(c.Storage.tFile), &bto)
+	err = bencode.Unmarshal(bytes.NewReader(c.storage.tFile), &bto)
 	if err != nil {
 		return "", "", err
 	}
@@ -141,14 +141,14 @@ func (c *Client) AddTorrentByFileDialog(directURL string) (string, string, error
 
 func (c *Client) AddTorrentByFile(operation string) (string, error) {
 	if operation == "file+add-no" {
-		c.Storage.tFile = nil
+		c.storage.tFile = nil
 		return "Okay", nil
 	}
 
 	pathKey := strings.Split(operation, "-")[1]
 	path := filepath.Join(c.API.Session.DownloadDir + c.Categories[pathKey].Path)
 
-	base64Str := base64.StdEncoding.EncodeToString(c.Storage.tFile)
+	base64Str := base64.StdEncoding.EncodeToString(c.storage.tFile)
 
 	res, err := c.API.AddTorrent(transmission.AddTorrentArg{
 		DownloadDir: path,

@@ -23,11 +23,8 @@ type Client struct {
 	eventBus  *events.Bus
 	cache     *cache.Torrents
 	mediaPath string
-	Storage   struct {
-		Torrent    *transmission.Torrent
-		tFile      []byte
-		magentLink string
-		messageID  int
+	storage   struct {
+		tFile []byte
 	}
 }
 

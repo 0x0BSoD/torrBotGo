@@ -49,6 +49,7 @@ func serve(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 	config.Telegram.Client = tgClient
+	tgClient.SetChatID(config.Telegram.ChatID)
 
 	config.Logger.Info("connecting to transmission API")
 	trCfg := transmission.Config{
@@ -81,6 +82,9 @@ func serve(cmd *cobra.Command, args []string) {
 	busCtx, busCancel := context.WithCancel(context.Background())
 	defer busCancel()
 	go config.EventBus.Run(busCtx)
+	config.EventBus.Subscribe(events.EventTorrentDownloadDone, func(ev events.Event) {
+		_ = config.Telegram.Client.SendMessage(ev.Text, nil)
+	})
 
 	config.Logger.Info("starting TG update parser")
 	prsrCtx, prsrCancel := context.WithCancel(context.Background())

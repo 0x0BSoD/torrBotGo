@@ -36,6 +36,7 @@ type Config struct {
 	Telegram struct {
 		Client *telegram.Client
 		Token  string `yaml:"token"`
+		ChatID int64  `yaml:"chat_id,omitempty"`
 	} `yaml:"telegram"`
 
 	Transmission struct {

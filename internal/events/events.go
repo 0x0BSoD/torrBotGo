@@ -7,9 +7,6 @@ const (
 )
 
 type Event struct {
-	Type      Type
-	TorrentID int
-	Name      string
-	Err       error
-	Text      string
+	Type Type
+	Text string
 }
