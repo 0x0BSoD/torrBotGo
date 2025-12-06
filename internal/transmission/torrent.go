@@ -5,12 +5,14 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackpal/bencode-go"
@@ -82,25 +84,36 @@ func (c *Client) AddTorrentByFileDialog(directURL string) (string, string, error
 
 	// torrent from rutracker
 	if bto.Comment != "" {
-		imgURL, err := getImgURLRutracker(bto.Comment)
+		if !strings.HasPrefix(bto.Comment, "https://rutracker.org/") {
+			c.logger.Sugar().Debugf("not a RuTracker: %s", bto.Comment)
+			return bto.Info.Name, "", nil
+		}
+
+		doc, err := fetchPage(bto.Comment)
 		if err != nil {
 			return bto.Info.Name, "", nil
 		}
 
+		imgURL := getImgURLRutracker(doc)
+		category := getCategoryRutracker(doc)
+		suggestedCat := matchCategory(category, c.Categories)
+
+		resultText := fmt.Sprintf("%s::%s", suggestedCat, bto.Info.Name)
+
 		_, err = url.ParseRequestURI(imgURL)
 		if err != nil {
-			return bto.Info.Name, "", nil
+			return resultText, "", nil
 		}
 
 		client := httpClient()
 		resp, err := client.Get(imgURL)
 		if err != nil {
-			return bto.Info.Name, "", nil
+			return resultText, "", nil
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != 200 {
-			return bto.Info.Name, "", nil
+			return resultText, "", nil
 		}
 
 		hasher := sha1.New()
@@ -118,7 +131,7 @@ func (c *Client) AddTorrentByFileDialog(directURL string) (string, string, error
 			return "", "", err
 		}
 
-		return bto.Info.Name, imgPath, nil
+		return resultText, imgPath, nil
 
 	}
 

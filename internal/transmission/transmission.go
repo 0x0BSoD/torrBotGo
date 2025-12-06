@@ -15,12 +15,15 @@ import (
 
 type Client struct {
 	API        *transmission.Client
-	Categories map[string]string
-	logger     *zap.Logger
-	eventBus   *events.Bus
-	cache      *cache.Torrents
-	mediaPath  string
-	Storage    struct {
+	Categories map[string]struct {
+		Path    string `yaml:"path"`
+		Matcher string `yaml:"matcher"`
+	}
+	logger    *zap.Logger
+	eventBus  *events.Bus
+	cache     *cache.Torrents
+	mediaPath string
+	Storage   struct {
 		Torrent    *transmission.Torrent
 		tFile      []byte
 		magentLink string
@@ -34,9 +37,12 @@ type Config struct {
 	Password   string
 	EventBus   *events.Bus
 	Logger     *zap.Logger
-	Categories map[string]string
-	MediaPath  string
-	Custom     transmission.SetSessionArgs
+	Categories map[string]struct {
+		Path    string `yaml:"path"`
+		Matcher string `yaml:"matcher"`
+	}
+	MediaPath string
+	Custom    transmission.SetSessionArgs
 }
 
 type Status struct {

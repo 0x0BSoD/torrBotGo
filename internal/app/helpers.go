@@ -39,6 +39,11 @@ type input struct {
 	ErrorString string
 }
 
+type category struct {
+	Path    string
+	Matcher string
+}
+
 func renderTorrent(torrent *transmission.Torrent) (string, error) {
 	icon, status := parseStatus(torrent.Status)
 
@@ -52,4 +57,18 @@ func renderTorrent(torrent *transmission.Torrent) (string, error) {
 		return "", err
 	}
 	return buf.String(), nil
+}
+
+func extractKeys(input map[string]struct {
+	Path    string `yaml:"path"`
+	Matcher string `yaml:"matcher"`
+},
+) []string {
+	result := make([]string, len(input))
+	i := 0
+	for name := range input {
+		result[i] = name
+		i++
+	}
+	return result
 }

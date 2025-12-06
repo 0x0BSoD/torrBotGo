@@ -23,10 +23,13 @@ type Config struct {
 		ErrorMedia     string `yaml:"error_media"`
 		AutoCategories bool   `yaml:"auto_categories"`
 		Dirs           struct {
-			Images     string            `yaml:"images"`
-			Working    string            `yaml:"working"`
-			Download   string            `yaml:"download"`
-			Categories map[string]string `yaml:"categories"`
+			Images     string `yaml:"images"`
+			Working    string `yaml:"working"`
+			Download   string `yaml:"download"`
+			Categories map[string]struct {
+				Path    string `yaml:"path"`
+				Matcher string `yaml:"matcher"`
+			} `yaml:"categories"`
 		} `yaml:"dirs"`
 	} `yaml:"app"`
 
@@ -77,7 +80,7 @@ func New(path string) (Config, error) {
 	}
 
 	for _, d := range result.App.Dirs.Categories {
-		path := filepath.Join(result.App.Dirs.Download, d)
+		path := filepath.Join(result.App.Dirs.Download, d.Path)
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			err = os.MkdirAll(path, 0o755)
 			if err != nil {

@@ -1,43 +1,47 @@
 package transmission
 
 import (
-	"errors"
-	"net/http"
-	"strings"
-
 	"github.com/PuerkitoBio/goquery"
+	"golang.org/x/net/html/charset"
 )
 
-func httpClient() *http.Client {
-	client := http.Client{
-		CheckRedirect: func(r *http.Request, via []*http.Request) error {
-			r.URL.Opaque = r.URL.Path
-			return nil
-		},
+func fetchPage(url string) (*goquery.Document, error) {
+	client := httpClient()
+	resp, err := client.Get(url)
+	if err != nil {
+		return nil, err
 	}
 
-	return &client
+	utf8Reader, err := charset.NewReader(resp.Body, resp.Header.Get("Content-Type"))
+	if err != nil {
+		return nil, err
+	}
+
+	doc, err := goquery.NewDocumentFromReader(utf8Reader)
+	if err != nil {
+		return nil, err
+	}
+
+	return doc, nil
 }
 
-func getImgURLRutracker(url string) (string, error) {
-	if !strings.HasPrefix(url, "https://rutracker.org/") {
-		return "", errors.New("not a RuTracker")
-	}
-
-	resp, err := http.Get(url)
-	if err != nil {
-		return "", err
-	}
-
-	doc, err := goquery.NewDocumentFromReader(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
+func getImgURLRutracker(doc *goquery.Document) string {
 	var imgURL string
 	doc.Find(".postImgAligned").Each(func(i int, s *goquery.Selection) {
 		imgURL, _ = s.Attr("title")
 	})
 
-	return imgURL, nil
+	return imgURL
+}
+
+func getCategoryRutracker(doc *goquery.Document) []string {
+	var category []string
+	doc.Find(".t-breadcrumb-top").Each(func(i int, s *goquery.Selection) {
+		aItems := s.Find("a")
+		aItems.Each((func(i int, s *goquery.Selection) {
+			category = append(category, s.Text())
+		}))
+	})
+
+	return category
 }

@@ -24,7 +24,7 @@ func TorrentKbd(hash string) tgbotapi.InlineKeyboardMarkup {
 	)
 }
 
-func TorrentAddKbd(byFile bool, categories map[string]string) tgbotapi.InlineKeyboardMarkup {
+func TorrentAddKbd(byFile bool, categories []string) tgbotapi.InlineKeyboardMarkup {
 	var rows [][]tgbotapi.InlineKeyboardButton
 	var btns []tgbotapi.InlineKeyboardButton
 	count := 0
@@ -33,13 +33,13 @@ func TorrentAddKbd(byFile bool, categories map[string]string) tgbotapi.InlineKey
 		prefix = "file+"
 	}
 
-	for name, path := range categories {
+	for _, name := range categories {
 		if count == 3 {
 			rows = append(rows, tgbotapi.NewInlineKeyboardRow(btns...))
 			btns = []tgbotapi.InlineKeyboardButton{}
 			count = 0
 		}
-		btns = append(btns, tgbotapi.NewInlineKeyboardButtonData(name, prefix+"add-"+path))
+		btns = append(btns, tgbotapi.NewInlineKeyboardButtonData(name, prefix+"add-"+name))
 		count++
 	}
 	rows = append(rows, tgbotapi.NewInlineKeyboardRow(btns...))
