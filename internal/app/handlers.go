@@ -2,6 +2,7 @@ package app
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -62,7 +63,7 @@ func handleCommand(update tgbotapi.Update, tClient *telegram.Client, trClient *t
 	}
 }
 
-func HandleInline(update tgbotapi.Update, tClient *telegram.Client, trClient *transmission.Client, logger *zap.Logger) {
+func handleInline(update tgbotapi.Update, tClient *telegram.Client, trClient *transmission.Client, logger *zap.Logger) {
 	if update.CallbackQuery == nil || update.CallbackQuery.Data == "" {
 		return
 	}
@@ -85,6 +86,40 @@ func HandleInline(update tgbotapi.Update, tClient *telegram.Client, trClient *tr
 				tClient.SendError(chatID, fmt.Sprintf("send config failed, %v", err))
 				return
 			}
+		}
+	}
+}
+
+func handleMessage(update tgbotapi.Update, tClient *telegram.Client, trClient *transmission.Client, logger *zap.Logger) {
+	chatID := update.Message.Chat.ID
+	torrents, err := trClient.Torrents(update.Message.Text)
+	if err != nil {
+		if errors.Is(err, transmission.ErrorFilterNotFound) {
+			tClient.SendError(chatID, "I don't know that command. handleMessage")
+			return
+		}
+		tClient.SendError(chatID, fmt.Sprintf("get torrents failed, %v", err))
+		return
+	}
+
+	if len(torrents) == 0 {
+		if err := tClient.SendMessage(chatID, "Noting to show", nil); err != nil {
+			tClient.SendError(chatID, fmt.Sprintf("send failed, %v", err))
+			return
+		}
+	}
+
+	for hash, torrent := range torrents {
+		text, err := renderTorrent(torrent)
+		if err != nil {
+			tClient.SendError(chatID, fmt.Sprintf("render torrent template failed, %v", err))
+			return
+		}
+		replyMarkup := telegram.TorrentKbd(hash)
+
+		if err := tClient.SendMessage(chatID, text, replyMarkup); err != nil {
+			tClient.SendError(chatID, fmt.Sprintf("send torrent item failed, %v", err))
+			return
 		}
 	}
 }

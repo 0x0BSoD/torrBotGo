@@ -28,11 +28,14 @@ func StartUpdateParser(ctx context.Context, cfg *config.Config, interval time.Du
 		case upd := <-updates:
 			switch {
 			case upd.Message == nil:
-				HandleInline(upd, cfg.Telegram.Client, cfg.Transmission.Client, cfg.Logger)
+				cfg.Logger.Sugar().Debugf("got inline message: %s", upd.CallbackQuery.Data)
+				handleInline(upd, cfg.Telegram.Client, cfg.Transmission.Client, cfg.Logger)
 			case upd.Message.IsCommand():
+				cfg.Logger.Sugar().Debugf("got command message: %s", upd.Message.Command())
 				handleCommand(upd, cfg.Telegram.Client, cfg.Transmission.Client, cfg.Logger)
 			default:
-				cfg.Logger.Sugar().Warnf("text message: %v", upd)
+				cfg.Logger.Sugar().Debugf("got plain message: %s", upd.Message.Text)
+				handleMessage(upd, cfg.Telegram.Client, cfg.Transmission.Client, cfg.Logger)
 			}
 		}
 	}

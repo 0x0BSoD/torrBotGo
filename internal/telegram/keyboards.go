@@ -15,3 +15,11 @@ var ConfigKbd = tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardButtonData("Show full config as JSON", "json_show"),
 	),
 )
+
+func TorrentKbd(hash string) tgbotapi.InlineKeyboardMarkup {
+	return tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("Details", "open_"+hash),
+		),
+	)
+}

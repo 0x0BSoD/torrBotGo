@@ -36,3 +36,20 @@ func TmplConfig() *template.Template {
 
 	return result
 }
+
+func TmplTorrentListItem() *template.Template {
+	lines := []string{
+		"`{{ .Icon }} | {{ .Status }} | ID: {{ .ID }}`",
+		"{{ .Name }}",
+		"{{ if .ErrorString -}}",
+		"`----`",
+		"{{ .ErrorString }}",
+		"{{ end }}",
+	}
+
+	result := template.Must(
+		template.New("trListItem").
+			Parse(strings.Join(lines, "\n")))
+
+	return result
+}
