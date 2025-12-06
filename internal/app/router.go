@@ -11,10 +11,10 @@ import (
 )
 
 // StartUpdateParser - loop for read updates from Telegram
-func StartUpdateParser(ctx context.Context, cfg *config.Config, interval time.Duration) error {
+func StartUpdateParser(ctx context.Context, cfg *config.Config, timeout time.Duration) error {
 	// TODO: Store offset
 	u := tgbotapi.NewUpdate(0)
-	u.Timeout = int(interval)
+	u.Timeout = int(timeout)
 
 	updates, err := cfg.Telegram.Client.BotAPI.GetUpdatesChan(u)
 	if err != nil {

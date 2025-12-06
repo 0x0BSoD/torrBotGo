@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/zap/zapcore"
@@ -71,12 +72,18 @@ func serve(cmd *cobra.Command, args []string) {
 	}()
 	config.Transmission.Client = trClient
 
+	config.Logger.Info("starting Cache updater")
+	cacheCtx, cacheCancel := context.WithCancel(context.Background())
+	defer cacheCancel()
+	go trClient.StartCacheUpdater(cacheCtx, 5*time.Second)
+
 	config.Logger.Info("starting Event Bus")
 	busCtx, busCancel := context.WithCancel(context.Background())
 	defer busCancel()
 	go config.EventBus.Run(busCtx)
 
+	config.Logger.Info("starting TG update parser")
 	prsrCtx, prsrCancel := context.WithCancel(context.Background())
 	defer prsrCancel()
-	app.StartUpdateParser(prsrCtx, &config, 60)
+	app.StartUpdateParser(prsrCtx, &config, 60*time.Second)
 }
