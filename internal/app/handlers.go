@@ -99,19 +99,22 @@ func handleMessage(update tgbotapi.Update, tClient *telegram.Client, trClient *t
 			tClient.SendError(chatID, fmt.Sprintf("get file URL failed, %v", err))
 			return
 		}
-		textData, imgPath, err := trClient.AddTorrentByFileDialog(_url)
+		title, imgPath, err := trClient.AddTorrentByFileDialog(_url)
 		if err != nil {
 			tClient.SendError(chatID, fmt.Sprintf("add torrent by file failed, %v", err))
 			return
 		}
-		data := strings.Split(textData, "::")
-		suggestedCat := data[0]
-		title := data[1]
-		catList := []string{
-			suggestedCat,
-		}
-		if suggestedCat == "noop" {
-			catList = extractKeys(trClient.Categories)
+
+		catList := extractKeys(trClient.Categories)
+		data := strings.Split(title, "::")
+		if len(data) >= 2 {
+			suggestedCat := data[0]
+			title = data[1]
+			if suggestedCat != "noop" {
+				catList = []string{
+					suggestedCat,
+				}
+			}
 		}
 		kbdAdd := telegram.TorrentAddKbd(true, catList)
 		if imgPath != "" {

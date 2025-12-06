@@ -2,6 +2,7 @@ package transmission
 
 import (
 	"net/http"
+	"slices"
 	"strings"
 )
 
@@ -24,10 +25,8 @@ func matchCategory(input []string, categories map[string]struct {
 	for i, j := range categories {
 		matchers := strings.Split(j.Matcher, ",")
 		for _, k := range input {
-			for _, l := range matchers {
-				if k == l {
-					return i
-				}
+			if slices.Contains(matchers, k) {
+				return i
 			}
 		}
 	}
