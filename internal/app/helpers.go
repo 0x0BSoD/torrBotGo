@@ -50,6 +50,7 @@ func renderTorrent(torrent *transmission.Torrent) (string, error) {
 	var buf bytes.Buffer
 	if err := telegram.TmplTorrentListItem().Execute(&buf, input{
 		ID:          int64(torrent.ID),
+		Name:        torrent.Name,
 		Icon:        icon,
 		Status:      status,
 		ErrorString: torrent.ErrorString,

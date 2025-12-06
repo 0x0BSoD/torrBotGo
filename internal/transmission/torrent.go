@@ -2,6 +2,7 @@ package transmission
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha1"
 	"encoding/base64"
 	"errors"
@@ -136,4 +137,28 @@ func (c *Client) AddTorrentByFileDialog(directURL string) (string, string, error
 	}
 
 	return bto.Info.Name, "", nil
+}
+
+func (c *Client) AddTorrentByFile(operation string) (string, error) {
+	if operation == "file+add-no" {
+		c.Storage.tFile = nil
+		return "Okay", nil
+	}
+
+	pathKey := strings.Split(operation, "-")[1]
+	path := filepath.Join(c.API.Session.DownloadDir + c.Categories[pathKey].Path)
+
+	base64Str := base64.StdEncoding.EncodeToString(c.Storage.tFile)
+
+	res, err := c.API.AddTorrent(transmission.AddTorrentArg{
+		DownloadDir: path,
+		Metainfo:    base64Str,
+		Paused:      false,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	_ = c.updateCache(context.TODO())
+	return fmt.Sprintf("Successfully added\n`%s`\nID:`%d`", res.Name, res.ID), nil
 }

@@ -68,11 +68,28 @@ func handleInline(update tgbotapi.Update, tClient *telegram.Client, trClient *tr
 		return
 	}
 
-	// messageID := update.CallbackQuery.Message.MessageID
+	messageID := update.CallbackQuery.Message.MessageID
 	chatID := update.CallbackQuery.Message.Chat.ID
 
+	if strings.HasPrefix(update.CallbackQuery.Data, "file+add-") {
+		text, err := trClient.AddTorrentByFile(update.CallbackQuery.Data)
+		if err != nil {
+			tClient.SendError(chatID, fmt.Sprintf("add torrent by file failed, %v", err))
+			return
+		}
+
+		if err := tClient.RemoveMessage(chatID, messageID); err != nil {
+			tClient.SendError(chatID, fmt.Sprintf("remove message failed, %v", err))
+			return
+		}
+
+		if err := tClient.SendMessage(chatID, text, nil); err != nil {
+			tClient.SendError(chatID, fmt.Sprintf("send config failed, %v", err))
+			return
+		}
+	}
+
 	if strings.Contains(update.CallbackQuery.Data, "_") {
-		// tHash := glh.GetMD5Hash(strings.ReplaceAll(strings.ReplaceAll(update.CallbackQuery.Message.Text, "`", ""), "\n", ""))
 		request := strings.Split(update.CallbackQuery.Data, "_")
 		switch request[0] {
 		case "json":

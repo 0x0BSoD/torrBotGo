@@ -83,3 +83,13 @@ func (c *Client) SendError(chatID int64, text string) {
 		c.logger.Sugar().Panicf("SendError failed, %s", err)
 	}
 }
+
+func (c *Client) RemoveMessage(chatID int64, messageID int) error {
+	msgRm := tgbotapi.NewDeleteMessage(chatID, messageID)
+
+	if _, err := c.BotAPI.Send(msgRm); err != nil {
+		return err
+	}
+
+	return nil
+}
