@@ -60,7 +60,10 @@ type bencodeTorrent struct {
 	Info     bencodeInfo `bencode:"info"`
 }
 
-var ErrorFilterNotFound = errors.New("unknown filter")
+var (
+	ErrorFilterNotFound  = errors.New("unknown filter")
+	ErrorTorrentNotFound = errors.New("torrent not found")
+)
 
 func (c *Client) Torrents(showFilter string) (map[string]*transmission.Torrent, error) {
 	items, _ := c.cache.Snapshot()
@@ -221,4 +224,17 @@ func (c *Client) TorrentDetails(hash string) (Torrent, error) {
 		Uspeed:         glh.ConvertBytes(float64(torrent.RateUpload), glh.Speed),
 		Percents:       fmt.Sprintf("%.2f%%", torrent.PercentDone*100.0),
 	}, nil
+}
+
+func (c *Client) Delete(hash string, rmfiles bool) error {
+	t, ok := c.cache.GetByHash(hash)
+	if !ok {
+		return ErrorTorrentNotFound
+	}
+	err := c.API.RemoveTorrents([]*transmission.Torrent{t}, rmfiles)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

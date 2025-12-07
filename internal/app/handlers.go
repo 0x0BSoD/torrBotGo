@@ -93,14 +93,15 @@ func handleInline(update tgbotapi.Update, tClient *telegram.Client, trClient *tr
 
 	if strings.Contains(update.CallbackQuery.Data, "_") {
 		request := strings.Split(update.CallbackQuery.Data, "_")
+		hash := request[1]
 		switch request[0] {
-		case "open", "update":
-			hash := request[1]
+		case "open", "update", "delete-no":
 			torrent, err := trClient.TorrentDetails(hash)
 			if err != nil {
 				tClient.SendError(fmt.Sprintf("get torrent failed, %v", err))
 				return
 			}
+
 			var buf bytes.Buffer
 			if err := telegram.TmplTorrent().Execute(&buf, torrent); err != nil {
 				tClient.SendError(fmt.Sprintf("tmpl torrent failed, %v", err))
@@ -119,9 +120,45 @@ func handleInline(update tgbotapi.Update, tClient *telegram.Client, trClient *tr
 				return
 			}
 		case "delete":
+			torrent, err := trClient.TorrentDetails(hash)
+			if err != nil {
+				tClient.SendError(fmt.Sprintf("get torrent failed, %v", err))
+				return
+			}
+
+			var buf bytes.Buffer
+			if err := telegram.TmplTorrent().Execute(&buf, torrent); err != nil {
+				tClient.SendError(fmt.Sprintf("tmpl torrent failed, %v", err))
+				return
+			}
+
+			replyMarkup := telegram.TorrentDeleteKbd(hash)
+			if err := tClient.SendEditedMessage(messageID, buf.String(), &replyMarkup); err != nil {
+				tClient.SendError(fmt.Sprintf("send torrent details failed, %v", err))
+				return
+			}
 		case "delete-yes":
+			err := trClient.Delete(hash, false)
+			if err != nil {
+				tClient.SendError(fmt.Sprintf("remove torrent failed, %v", err))
+				return
+			}
+
+			if err := tClient.SendEditedMessage(messageID, "Removed", nil); err != nil {
+				tClient.SendError(fmt.Sprintf("send torrent deleted failed, %v", err))
+				return
+			}
 		case "delete-yes+data":
-		case "delete-no":
+			err := trClient.Delete(hash, true)
+			if err != nil {
+				tClient.SendError(fmt.Sprintf("remove torrent and data failed, %v", err))
+				return
+			}
+
+			if err := tClient.SendEditedMessage(messageID, "Removed", nil); err != nil {
+				tClient.SendError(fmt.Sprintf("send torrent deleted failed, %v", err))
+				return
+			}
 		case "files":
 		case "stop":
 		case "start":
