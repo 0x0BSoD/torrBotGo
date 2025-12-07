@@ -8,6 +8,7 @@ import (
 
 	"go.uber.org/zap"
 
+	glh "github.com/0x0BSoD/goLittleHelpers"
 	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
 
 	"github.com/0x0BSoD/torrBotGo/internal/telegram"
@@ -93,6 +94,43 @@ func handleInline(update tgbotapi.Update, tClient *telegram.Client, trClient *tr
 	if strings.Contains(update.CallbackQuery.Data, "_") {
 		request := strings.Split(update.CallbackQuery.Data, "_")
 		switch request[0] {
+		case "open", "update":
+			hash := request[1]
+			torrent, err := trClient.TorrentDetails(hash)
+			if err != nil {
+				tClient.SendError(fmt.Sprintf("get torrent failed, %v", err))
+				return
+			}
+			var buf bytes.Buffer
+			if err := telegram.TmplTorrent().Execute(&buf, torrent); err != nil {
+				tClient.SendError(fmt.Sprintf("tmpl torrent failed, %v", err))
+				return
+			}
+
+			oldHash := glh.GetMD5Hash(strings.ReplaceAll(strings.ReplaceAll(update.CallbackQuery.Message.Text, "`", ""), "\n", ""))
+			newHash := glh.GetMD5Hash(strings.ReplaceAll(strings.ReplaceAll(buf.String(), "`", ""), "\n", ""))
+			if newHash == oldHash {
+				return
+			}
+
+			replyMarkup := telegram.TorrentDetailKbd(hash, torrent.StatusCode)
+			if err := tClient.SendEditedMessage(messageID, buf.String(), &replyMarkup); err != nil {
+				tClient.SendError(fmt.Sprintf("send torrent details failed, %v", err))
+				return
+			}
+		case "delete":
+		case "delete-yes":
+		case "delete-yes+data":
+		case "delete-no":
+		case "files":
+		case "stop":
+		case "start":
+		case "priority":
+		case "prior-top":
+		case "prior-up":
+		case "prior-down":
+		case "prior-bottom":
+		case "prior-no":
 		case "json":
 			config, err := trClient.SessionJSONConfig()
 			if err != nil {
@@ -104,6 +142,9 @@ func handleInline(update tgbotapi.Update, tClient *telegram.Client, trClient *tr
 				tClient.SendError(fmt.Sprintf("send config failed, %v", err))
 				return
 			}
+		default:
+			tClient.SendError("I don't know that command. handleInline")
+			return
 		}
 	}
 }

@@ -100,3 +100,22 @@ func (c *Client) RemoveMessage(messageID int) error {
 
 	return nil
 }
+
+func (c *Client) SendEditedMessage(messageID int, text string, replyMarkup *tgbotapi.InlineKeyboardMarkup) error {
+	if text == "" {
+		return fmt.Errorf("message cannot be empty")
+	}
+
+	msg := tgbotapi.NewEditMessageText(c.storage.chatID, messageID, escapeAll(text))
+	msg.ParseMode = "MarkdownV2"
+
+	if replyMarkup != nil {
+		msg.ReplyMarkup = replyMarkup
+	}
+
+	if _, err := c.BotAPI.Send(msg); err != nil {
+		return err
+	}
+
+	return nil
+}

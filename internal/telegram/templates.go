@@ -5,6 +5,26 @@ import (
 	"text/template"
 )
 
+func TmplTorrent() *template.Template {
+	lines := []string{
+		"{{ .Icon }} | `{{ .Name }}` | ID: {{ .ID }}",
+		"Size: {{ .Size }}",
+		"Status: {{ .Status }}",
+		"Place in queue: {{ .PosInQ }}",
+		"`===========================================`",
+		"{{ if .Active }}Peers: {{ .Peers }}{{ end }}",
+		"{{ if .Active }}⬇️ Downloading: {{ .Dspeed }} | ⬆️ Uploading: {{ .Uspeed }}{{ end }}",
+		"{{ if .Downloading }}Percent done: {{ .Percents }}{{ end }}",
+		"{{ if .Error }}{{ .ErrorString }}{{ end }}",
+	}
+
+	result := template.Must(
+		template.New("torrentDetails").
+			Parse(strings.Join(lines, "\n")))
+
+	return result
+}
+
 func TmplStatus() *template.Template {
 	lines := []string{
 		"Free Space: `{{ .FreeSpace }}`",

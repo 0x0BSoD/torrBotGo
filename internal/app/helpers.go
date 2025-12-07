@@ -6,30 +6,8 @@ import (
 	"github.com/0x0BSoD/transmission"
 
 	"github.com/0x0BSoD/torrBotGo/internal/telegram"
+	intTransmission "github.com/0x0BSoD/torrBotGo/internal/transmission"
 )
-
-type TorrentStatus struct {
-	Icon  string
-	Label string
-}
-
-var statusMap = map[int]TorrentStatus{
-	0: {"⏹️", "Stopped"},
-	1: {"▶️", "Queued to check files"},
-	2: {"▶️", "Checking files"},
-	3: {"▶️", "Queued to download"},
-	4: {"▶️", "Downloading"},
-	5: {"▶️", "Queued to seed"},
-	6: {"▶️", "Seeding"},
-}
-
-func parseStatus(code int) (string, string) {
-	s, ok := statusMap[code]
-	if !ok {
-		return "♾️", "Undef"
-	}
-	return s.Icon, s.Label
-}
 
 type input struct {
 	ID          int64
@@ -45,7 +23,7 @@ type category struct {
 }
 
 func renderTorrent(torrent *transmission.Torrent) (string, error) {
-	icon, status := parseStatus(torrent.Status)
+	icon, status := intTransmission.ParseStatus(torrent.Status)
 
 	var buf bytes.Buffer
 	if err := telegram.TmplTorrentListItem().Execute(&buf, input{

@@ -47,3 +47,27 @@ func TorrentAddKbd(byFile bool, categories []string) tgbotapi.InlineKeyboardMark
 
 	return tgbotapi.NewInlineKeyboardMarkup(rows...)
 }
+
+func TorrentDetailKbd(hash string, status int) tgbotapi.InlineKeyboardMarkup {
+	if status == 0 {
+		return tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("Priority", "priority_"+hash),
+				tgbotapi.NewInlineKeyboardButtonData("Files", "files_"+hash),
+				tgbotapi.NewInlineKeyboardButtonData("Start", "start_"+hash),
+				tgbotapi.NewInlineKeyboardButtonData("Delete", "delete_"+hash),
+				tgbotapi.NewInlineKeyboardButtonData("🔁", "update_"+hash),
+			),
+		)
+	}
+
+	return tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("Priority", "priority_"+hash),
+			tgbotapi.NewInlineKeyboardButtonData("Files", "files_"+hash),
+			tgbotapi.NewInlineKeyboardButtonData("Stop", "stop_"+hash),
+			tgbotapi.NewInlineKeyboardButtonData("Delete", "delete_"+hash),
+			tgbotapi.NewInlineKeyboardButtonData("🔁", "update_"+hash),
+		),
+	)
+}

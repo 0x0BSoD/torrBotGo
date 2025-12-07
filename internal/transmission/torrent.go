@@ -18,8 +18,30 @@ import (
 
 	"github.com/jackpal/bencode-go"
 
+	glh "github.com/0x0BSoD/goLittleHelpers"
 	"github.com/0x0BSoD/transmission"
 )
+
+type Torrent struct {
+	ID             int
+	Peers          int
+	Downloading    bool
+	Active         bool
+	Name           string
+	Status         string
+	StatusCode     int
+	Icon           string
+	Error          bool
+	ErrorString    string
+	DownloadedSize string
+	Size           string
+	Comment        string
+	Hash           string
+	PosInQ         int
+	Dspeed         string
+	Uspeed         string
+	Percents       string
+}
 
 type filesList struct {
 	Name        string
@@ -161,4 +183,42 @@ func (c *Client) AddTorrentByFile(operation string) (string, error) {
 
 	_ = c.updateCache(context.TODO())
 	return fmt.Sprintf("Successfully added\n`%s`\nID:`%d`", res.Name, res.ID), nil
+}
+
+func (c *Client) TorrentDetails(hash string) (Torrent, error) {
+	torrent, ok := c.cache.GetByHash(hash)
+	if !ok {
+		return Torrent{}, errors.New("torrent not found")
+	}
+
+	var active bool
+	if torrent.Status != transmission.StatusStopped {
+		active = true
+	}
+
+	icon, status := ParseStatus(torrent.Status)
+	var _error bool
+	if torrent.ErrorString != "" {
+		_error = true
+		icon = "🔥️"
+	}
+
+	return Torrent{
+		ID:             torrent.ID,
+		Peers:          len(*torrent.Peers),
+		Downloading:    torrent.Status == transmission.StatusDownloading,
+		PosInQ:         torrent.QueuePosition,
+		Active:         active,
+		Error:          _error,
+		Name:           torrent.Name,
+		Status:         status,
+		StatusCode:     torrent.Status,
+		Icon:           icon,
+		ErrorString:    torrent.ErrorString,
+		Size:           glh.ConvertBytes(float64(torrent.TotalSize), glh.Size),
+		DownloadedSize: glh.ConvertBytes(float64(torrent.LeftUntilDone), glh.Size),
+		Dspeed:         glh.ConvertBytes(float64(torrent.RateDownload), glh.Speed),
+		Uspeed:         glh.ConvertBytes(float64(torrent.RateUpload), glh.Speed),
+		Percents:       fmt.Sprintf("%.2f%%", torrent.PercentDone*100.0),
+	}, nil
 }
