@@ -73,3 +73,17 @@ func TmplTorrentListItem() *template.Template {
 
 	return result
 }
+
+func TmplTorrentFilesListItem() *template.Template {
+	lines := []string{
+		"`{{ .Name }}`",
+		"Size: `{{ .Size }}`",
+		"To Download: {{ if .Downloading }} ✔️ {{else}} ❌ {{end}}",
+	}
+
+	result := template.Must(
+		template.New("trFilesListItem").
+			Parse(strings.Join(lines, "\n")))
+
+	return result
+}

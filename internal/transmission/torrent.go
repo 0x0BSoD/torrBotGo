@@ -43,7 +43,7 @@ type Torrent struct {
 	Percents       string
 }
 
-type filesList struct {
+type TorrentFilesItem struct {
 	Name        string
 	Size        string
 	Downloading bool
@@ -237,4 +237,61 @@ func (c *Client) Delete(hash string, rmfiles bool) error {
 	}
 
 	return nil
+}
+
+func (c *Client) GetTorrentFiles(hash string) []TorrentFilesItem {
+	t, _ := c.cache.GetByHash(hash)
+	files := *t.Files
+	filesStats := *t.FileStats
+	var result []TorrentFilesItem
+
+	for i := range len(files) {
+		result = append(result, TorrentFilesItem{
+			Name:        files[i].Name,
+			Size:        glh.ConvertBytes(float64(files[i].Length), glh.Size),
+			Downloading: filesStats[i].Wanted,
+		})
+	}
+
+	return result
+}
+
+func (c *Client) StartStop(hash, op string) error {
+	t, _ := c.cache.GetByHash(hash)
+
+	switch op {
+	case "start":
+		if err := t.Start(); err != nil {
+			return err
+		}
+	case "stop":
+		if err := t.Stop(); err != nil {
+			return err
+		}
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return errors.New("torrent state change timeout exceeded")
+		case <-ticker.C:
+			t, _ := c.cache.GetByHash(hash)
+			switch op {
+			case "start":
+				if t.Status != transmission.StatusStopped {
+					return nil
+				}
+			case "stop":
+				if t.Status == transmission.StatusStopped {
+					return nil
+				}
+			}
+		}
+	}
 }
