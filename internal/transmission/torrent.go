@@ -90,7 +90,7 @@ func (c *Client) Torrents(showFilter string) (map[string]*transmission.Torrent, 
 	return result, nil
 }
 
-func (c *Client) AddTorrentByFileDialog(directURL string) (string, string, error) {
+func (c *Client) AddByFileDialog(directURL string) (string, string, error) {
 	resp, err := http.Get(directURL)
 	if err != nil {
 		return "", "", err
@@ -164,7 +164,7 @@ func (c *Client) AddTorrentByFileDialog(directURL string) (string, string, error
 	return bto.Info.Name, "", nil
 }
 
-func (c *Client) AddTorrentByFile(operation string) (string, error) {
+func (c *Client) AddByFile(operation string) (string, error) {
 	if operation == "file+add-no" {
 		c.storage.tFile = nil
 		return "Okay", nil
@@ -188,7 +188,7 @@ func (c *Client) AddTorrentByFile(operation string) (string, error) {
 	return fmt.Sprintf("Successfully added\n`%s`\nID:`%d`", res.Name, res.ID), nil
 }
 
-func (c *Client) TorrentDetails(hash string) (Torrent, error) {
+func (c *Client) Details(hash string) (Torrent, error) {
 	torrent, ok := c.cache.GetByHash(hash)
 	if !ok {
 		return Torrent{}, errors.New("torrent not found")
@@ -239,7 +239,7 @@ func (c *Client) Delete(hash string, rmfiles bool) error {
 	return nil
 }
 
-func (c *Client) GetTorrentFiles(hash string) []TorrentFilesItem {
+func (c *Client) GetFiles(hash string) []TorrentFilesItem {
 	t, _ := c.cache.GetByHash(hash)
 	files := *t.Files
 	filesStats := *t.FileStats
@@ -294,4 +294,38 @@ func (c *Client) StartStop(hash, op string) error {
 			}
 		}
 	}
+}
+
+func (c *Client) Priority(hash string, action string) error {
+	t, _ := c.cache.GetByHash(hash)
+
+	whatS := strings.Split(action, "-")[1]
+	switch whatS {
+	case "top":
+		err := c.API.QueueMoveTop([]*transmission.Torrent{t})
+		if err != nil {
+			return err
+		}
+	case "up":
+		err := c.API.QueueMoveUp([]*transmission.Torrent{t})
+		if err != nil {
+			return err
+		}
+	case "down":
+		err := c.API.QueueMoveDown([]*transmission.Torrent{t})
+		if err != nil {
+			return err
+		}
+	case "bottom":
+		err := c.API.QueueMoveBottom([]*transmission.Torrent{t})
+		if err != nil {
+			return err
+		}
+	case "no":
+		return nil
+	default:
+		return errors.New("nope, failed")
+	}
+
+	return nil
 }
