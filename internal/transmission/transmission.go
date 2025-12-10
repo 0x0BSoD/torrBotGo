@@ -24,7 +24,8 @@ type Client struct {
 	cache     *cache.Torrents
 	mediaPath string
 	storage   struct {
-		tFile []byte
+		tFile      []byte
+		magentLink string
 	}
 }
 

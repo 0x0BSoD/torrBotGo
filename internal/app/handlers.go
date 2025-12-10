@@ -91,6 +91,24 @@ func handleInline(update tgbotapi.Update, tClient *telegram.Client, trClient *tr
 		}
 	}
 
+	if strings.HasPrefix(update.CallbackQuery.Data, "add-") {
+		text, err := trClient.AddByMagent(update.CallbackQuery.Data)
+		if err != nil {
+			tClient.SendError(fmt.Sprintf("add torrent by magnet failed, %v", err))
+			return
+		}
+
+		if err := tClient.RemoveMessage(messageID); err != nil {
+			tClient.SendError(fmt.Sprintf("remove message failed, %v", err))
+			return
+		}
+
+		if err := tClient.SendMessage(text, nil); err != nil {
+			tClient.SendError(fmt.Sprintf("send config failed, %v", err))
+			return
+		}
+	}
+
 	if strings.Contains(update.CallbackQuery.Data, "_") {
 		request := strings.Split(update.CallbackQuery.Data, "_")
 		hash := request[1]
@@ -327,6 +345,19 @@ func handleMessage(update tgbotapi.Update, tClient *telegram.Client, trClient *t
 		}
 		if err := tClient.SendMessage(title, kbdAdd); err != nil {
 			tClient.SendError(fmt.Sprintf("send failed, %v", err))
+			return
+		}
+	} else if strings.HasPrefix(update.Message.Text, "magnet:") {
+		text, err := trClient.AddByMagnetDialog(update.Message.Text)
+		if err != nil {
+			tClient.SendError(fmt.Sprintf("add torrent by magent link failed, %v", err))
+			return
+		}
+
+		catList := extractKeys(trClient.Categories)
+		kbdAdd := telegram.TorrentAddKbd(false, catList)
+		if err := tClient.SendMessage(text, kbdAdd); err != nil {
+			tClient.SendError(fmt.Sprintf("send dialog failed, %v", err))
 			return
 		}
 	} else {

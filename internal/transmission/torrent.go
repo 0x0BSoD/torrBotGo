@@ -90,6 +90,51 @@ func (c *Client) Torrents(showFilter string) (map[string]*transmission.Torrent, 
 	return result, nil
 }
 
+func (c *Client) AddByMagnetDialog(input string) (string, error) {
+	var name string
+	var trackers []string
+
+	for i := range strings.SplitSeq(input, "&") {
+		decoded, err := url.QueryUnescape(i)
+		if err != nil {
+			return "", err
+		}
+
+		if strings.HasPrefix(decoded, "dn=") {
+			name = strings.ReplaceAll(decoded, "dn=", "")
+		}
+		if strings.HasPrefix(decoded, "tr=") {
+			trackers = append(trackers, strings.ReplaceAll(decoded, "tr=", ""))
+		}
+	}
+
+	c.storage.magentLink = input
+
+	return fmt.Sprintf("`%s`\nTrackers:`%s`", name, strings.Join(trackers, "\n")), nil
+}
+
+func (c *Client) AddByMagent(operation string) (string, error) {
+	if operation == "add-no" {
+		c.storage.magentLink = ""
+		return "Okay", nil
+	}
+
+	pathKey := strings.Split(operation, "-")[1]
+	path := filepath.Join(c.API.Session.DownloadDir + c.Categories[pathKey].Path)
+
+	res, err := c.API.AddTorrent(transmission.AddTorrentArg{
+		DownloadDir: path,
+		Filename:    c.storage.magentLink,
+		Paused:      false,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	_ = c.updateCache(context.TODO())
+	return fmt.Sprintf("Successfully added\n`%s`\nID:`%d`", res.Name, res.ID), nil
+}
+
 func (c *Client) AddByFileDialog(directURL string) (string, string, error) {
 	resp, err := http.Get(directURL)
 	if err != nil {
