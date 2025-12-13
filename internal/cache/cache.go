@@ -7,7 +7,7 @@ import (
 	"github.com/0x0BSoD/transmission"
 )
 
-// Torrents - List of torrents that sved for it's state watching
+// Torrents - List of torrents that saved for it's state watching
 type Torrents struct {
 	items    transmission.TorrentMap
 	idToHash map[int]string
