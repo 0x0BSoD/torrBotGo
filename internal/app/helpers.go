@@ -121,3 +121,32 @@ func editMessageWrapperHash(messageID int, oldMessage string, tClient *telegram.
 		return
 	}
 }
+
+func addTorrent(query string, messageID int, tClient *telegram.Client, trClient *intTransmission.Client) {
+	var (
+		text string
+		err  error
+	)
+
+	if strings.HasPrefix(query, "file+add-") {
+		text, err = trClient.AddByFile(query)
+	} else {
+		text, err = trClient.AddByMagent(query)
+	}
+	if err != nil {
+		tClient.SendError(fmt.Sprintf("add torrent failed, %v", err))
+		return
+	}
+
+	if messageID != -1 {
+		if err := tClient.RemoveMessage(messageID); err != nil {
+			tClient.SendError(fmt.Sprintf("remove message failed, %v", err))
+			return
+		}
+	}
+
+	if err := tClient.SendMessage(text, nil); err != nil {
+		tClient.SendError(fmt.Sprintf("send message failed, %v", err))
+		return
+	}
+}

@@ -8,13 +8,27 @@ import (
 	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
 
 	"github.com/0x0BSoD/torrBotGo/config"
+	"github.com/0x0BSoD/torrBotGo/internal/telegram"
+	"github.com/0x0BSoD/torrBotGo/internal/transmission"
 )
+
+type handler struct {
+	tClient      *telegram.Client
+	trClient     *transmission.Client
+	autoCategory bool
+}
 
 // StartUpdateParser - loop for read updates from Telegram
 func StartUpdateParser(ctx context.Context, cfg *config.Config, timeout time.Duration) error {
 	// TODO: Store offset
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = int(timeout)
+
+	h := handler{
+		tClient:      cfg.Telegram.Client,
+		trClient:     cfg.Transmission.Client,
+		autoCategory: cfg.App.AutoCategories,
+	}
 
 	updates, err := cfg.Telegram.Client.BotAPI.GetUpdatesChan(u)
 	if err != nil {
@@ -29,13 +43,13 @@ func StartUpdateParser(ctx context.Context, cfg *config.Config, timeout time.Dur
 			switch {
 			case upd.Message == nil:
 				cfg.Logger.Sugar().Debugf("got inline message: %s", upd.CallbackQuery.Data)
-				handleInline(upd, cfg.Telegram.Client, cfg.Transmission.Client)
+				h.handleInline(upd)
 			case upd.Message.IsCommand():
 				cfg.Logger.Sugar().Debugf("got command message: %s", upd.Message.Command())
-				handleCommand(upd, cfg.Telegram.Client, cfg.Transmission.Client)
+				h.handleCommand(upd)
 			default:
 				cfg.Logger.Sugar().Debugf("got plain message: %s", upd.Message.Text)
-				handleMessage(upd, cfg.Telegram.Client, cfg.Transmission.Client)
+				h.handleMessage(upd)
 			}
 		}
 	}

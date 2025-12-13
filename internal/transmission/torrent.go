@@ -132,7 +132,7 @@ func (c *Client) AddByMagent(operation string) (string, error) {
 	}
 
 	_ = c.updateCache(context.TODO())
-	return fmt.Sprintf("Successfully added\n`%s`\nID:`%d`", res.Name, res.ID), nil
+	return fmt.Sprintf("Successfully added\n`%s`\n`%s`\nID:`%d`", pathKey, res.Name, res.ID), nil
 }
 
 func (c *Client) AddByFileDialog(directURL string) (string, string, error) {
@@ -230,7 +230,7 @@ func (c *Client) AddByFile(operation string) (string, error) {
 	}
 
 	_ = c.updateCache(context.TODO())
-	return fmt.Sprintf("Successfully added\n`%s`\nID:`%d`", res.Name, res.ID), nil
+	return fmt.Sprintf("Successfully added\n`%s`\n`%s`\nID:`%d`", pathKey, res.Name, res.ID), nil
 }
 
 func (c *Client) Details(hash string) (Torrent, error) {
