@@ -59,7 +59,7 @@ func handleInline(update tgbotapi.Update, tClient *telegram.Client, trClient *tr
 
 			replyMarkup := telegram.TorrentDetailKbd(hash, torrent.StatusCode)
 
-			sendMessageWrapperHash(update.CallbackQuery.Message.Text, tClient, telegram.TmplTorrent(), replyMarkup, torrent)
+			editMessageWrapperHash(messageID, update.CallbackQuery.Message.Text, tClient, telegram.TmplTorrent(), &replyMarkup, torrent)
 		case "delete":
 			torrent, err := trClient.Details(hash)
 			if err != nil {
@@ -67,19 +67,11 @@ func handleInline(update tgbotapi.Update, tClient *telegram.Client, trClient *tr
 				return
 			}
 
-			var buf bytes.Buffer
-			if err := telegram.TmplTorrent().Execute(&buf, torrent); err != nil {
-				tClient.SendError(fmt.Sprintf("tmpl torrent failed, %v", err))
-				return
-			}
-
 			replyMarkup := telegram.TorrentDeleteKbd(hash)
-			if err := tClient.SendEditedMessage(messageID, buf.String(), &replyMarkup); err != nil {
-				tClient.SendError(fmt.Sprintf("send torrent details failed, %v", err))
-				return
-			}
-		case "delete-yes":
-			err := trClient.Delete(hash, false)
+
+			editMessageWrapperHash(messageID, update.CallbackQuery.Message.Text, tClient, telegram.TmplTorrent(), replyMarkup, torrent)
+		case "delete-yes", "delete-yes+data":
+			err := trClient.Delete(hash, strings.HasSuffix(request[0], "data"))
 			if err != nil {
 				tClient.SendError(fmt.Sprintf("remove torrent failed, %v", err))
 				return
@@ -89,30 +81,20 @@ func handleInline(update tgbotapi.Update, tClient *telegram.Client, trClient *tr
 				tClient.SendError(fmt.Sprintf("send torrent deleted failed, %v", err))
 				return
 			}
-		case "delete-yes+data":
-			err := trClient.Delete(hash, true)
-			if err != nil {
-				tClient.SendError(fmt.Sprintf("remove torrent and data failed, %v", err))
-				return
-			}
-
-			if err := tClient.SendEditedMessage(messageID, "Removed", nil); err != nil {
-				tClient.SendError(fmt.Sprintf("send torrent deleted failed, %v", err))
-				return
-			}
 		case "files":
-			files := trClient.GetFiles(hash)
-			for _, f := range files {
-				var buf bytes.Buffer
-				if err := telegram.TmplTorrentFilesListItem().Execute(&buf, f); err != nil {
-					tClient.SendError(fmt.Sprintf("tmpl torrent file item failed, %v", err))
-					return
-				}
+			var result struct {
+				Files []transmission.TorrentFilesItem
+			}
+			result.Files = trClient.GetFiles(hash)
+			var buf bytes.Buffer
+			if err := telegram.TmplTorrentFilesListItem().Execute(&buf, result); err != nil {
+				tClient.SendError(fmt.Sprintf("tmpl torrent file item failed, %v", err))
+				return
+			}
 
-				if err := tClient.SendMessage(buf.String(), nil); err != nil {
-					tClient.SendError(fmt.Sprintf("send torrent file item failed, %v", err))
-					return
-				}
+			if err := tClient.SendMessage(buf.String(), nil); err != nil {
+				tClient.SendError(fmt.Sprintf("send torrent file item failed, %v", err))
+				return
 			}
 		case "start", "stop":
 			torrent, err := trClient.Details(hash)

@@ -76,9 +76,9 @@ func TmplTorrentListItem() *template.Template {
 
 func TmplTorrentFilesListItem() *template.Template {
 	lines := []string{
-		"`{{ .Name }}`",
-		"Size: `{{ .Size }}`",
-		"To Download: {{ if .Downloading }} ✔️ {{else}} ❌ {{end}}",
+		"{{range .Files}}",
+		"🔹 `{{ .Name }}` - `{{ .Size }}` Downloading: {{ if .Downloading }} ✔️ {{else}} ❌ {{end}}",
+		"{{end}}",
 	}
 
 	result := template.Must(

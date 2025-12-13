@@ -97,3 +97,27 @@ func sendMessageWrapperHash(oldMessage string, tClient *telegram.Client, tmpl *t
 		return
 	}
 }
+
+func editMessageWrapperHash(messageID int, oldMessage string, tClient *telegram.Client, tmpl *template.Template, kbd, data any) {
+	toSend := data
+
+	if tmpl != nil {
+		var buf bytes.Buffer
+		if err := tmpl.Execute(&buf, data); err != nil {
+			tClient.SendError(fmt.Sprintf("template execute failed, %v", err))
+			return
+		}
+		toSend = buf.String()
+	}
+
+	oldHash := glh.GetMD5Hash(strings.ReplaceAll(strings.ReplaceAll(oldMessage, "`", ""), "\n", ""))
+	newHash := glh.GetMD5Hash(strings.ReplaceAll(strings.ReplaceAll(toSend.(string), "`", ""), "\n", ""))
+	if newHash == oldHash {
+		return
+	}
+
+	if err := tClient.SendEditedMessage(messageID, toSend.(string), kbd); err != nil {
+		tClient.SendError(fmt.Sprintf("send torrent deleted failed, %v", err))
+		return
+	}
+}

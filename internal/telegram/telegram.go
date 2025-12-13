@@ -101,7 +101,7 @@ func (c *Client) RemoveMessage(messageID int) error {
 	return nil
 }
 
-func (c *Client) SendEditedMessage(messageID int, text string, replyMarkup *tgbotapi.InlineKeyboardMarkup) error {
+func (c *Client) SendEditedMessage(messageID int, text string, replyMarkup any) error {
 	if text == "" {
 		return fmt.Errorf("message cannot be empty")
 	}
@@ -110,7 +110,7 @@ func (c *Client) SendEditedMessage(messageID int, text string, replyMarkup *tgbo
 	msg.ParseMode = "MarkdownV2"
 
 	if replyMarkup != nil {
-		msg.ReplyMarkup = replyMarkup
+		msg.ReplyMarkup = replyMarkup.(*tgbotapi.InlineKeyboardMarkup)
 	}
 
 	if _, err := c.BotAPI.Send(msg); err != nil {
