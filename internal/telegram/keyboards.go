@@ -49,6 +49,18 @@ func TorrentAddKbd(byFile bool, categories []string) tgbotapi.InlineKeyboardMark
 }
 
 func TorrentDetailKbd(hash string, status int) tgbotapi.InlineKeyboardMarkup {
+	if status == -1 {
+		return tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("Priority", "priority_"+hash),
+				tgbotapi.NewInlineKeyboardButtonData("Files", "files_"+hash),
+				tgbotapi.NewInlineKeyboardButtonData("⏳", "nope"),
+				tgbotapi.NewInlineKeyboardButtonData("Delete", "delete_"+hash),
+				tgbotapi.NewInlineKeyboardButtonData("🔁", "update_"+hash),
+			),
+		)
+	}
+
 	if status == 0 {
 		return tgbotapi.NewInlineKeyboardMarkup(
 			tgbotapi.NewInlineKeyboardRow(

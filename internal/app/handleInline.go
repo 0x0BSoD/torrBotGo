@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	glh "github.com/0x0BSoD/goLittleHelpers"
 	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
 
 	"github.com/0x0BSoD/torrBotGo/internal/telegram"
@@ -115,15 +114,10 @@ func handleInline(update tgbotapi.Update, tClient *telegram.Client, trClient *tr
 					return
 				}
 			}
-		case "stop":
+		case "start", "stop":
 			torrent, err := trClient.Details(hash)
 			if err != nil {
 				tClient.SendError(fmt.Sprintf("get torrent failed, %v", err))
-				return
-			}
-
-			if err := trClient.StartStop(hash, "stop"); err != nil {
-				tClient.SendError(fmt.Sprintf("torrent stop failed, %v", err))
 				return
 			}
 
@@ -133,38 +127,14 @@ func handleInline(update tgbotapi.Update, tClient *telegram.Client, trClient *tr
 				return
 			}
 
-			oldHash := glh.GetMD5Hash(strings.ReplaceAll(strings.ReplaceAll(update.CallbackQuery.Message.Text, "`", ""), "\n", ""))
-			newHash := glh.GetMD5Hash(strings.ReplaceAll(strings.ReplaceAll(buf.String(), "`", ""), "\n", ""))
-			if newHash == oldHash {
-				return
-			}
-
-			replyMarkup := telegram.TorrentDetailKbd(hash, torrent.StatusCode)
-			if err := tClient.SendEditedMessage(messageID, buf.String(), &replyMarkup); err != nil {
+			replyWaitMarkup := telegram.TorrentDetailKbd(hash, -1)
+			if err := tClient.SendEditedMessage(messageID, buf.String(), &replyWaitMarkup); err != nil {
 				tClient.SendError(fmt.Sprintf("send torrent details failed, %v", err))
 				return
 			}
-		case "start":
-			torrent, err := trClient.Details(hash)
-			if err != nil {
-				tClient.SendError(fmt.Sprintf("get torrent failed, %v", err))
-				return
-			}
 
-			if err := trClient.StartStop(hash, "start"); err != nil {
-				tClient.SendError(fmt.Sprintf("torrent start failed, %v", err))
-				return
-			}
-
-			var buf bytes.Buffer
-			if err := telegram.TmplTorrent().Execute(&buf, torrent); err != nil {
-				tClient.SendError(fmt.Sprintf("tmpl torrent failed, %v", err))
-				return
-			}
-
-			oldHash := glh.GetMD5Hash(strings.ReplaceAll(strings.ReplaceAll(update.CallbackQuery.Message.Text, "`", ""), "\n", ""))
-			newHash := glh.GetMD5Hash(strings.ReplaceAll(strings.ReplaceAll(buf.String(), "`", ""), "\n", ""))
-			if newHash == oldHash {
+			if err := trClient.StartStop(hash, request[0]); err != nil {
+				tClient.SendError(fmt.Sprintf("torrent start/stop failed, %v", err))
 				return
 			}
 
