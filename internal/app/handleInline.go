@@ -2,11 +2,8 @@ package app
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"strings"
-
-	"go.uber.org/zap"
 
 	glh "github.com/0x0BSoD/goLittleHelpers"
 	tgbotapi "github.com/0x0BSoD/telegram-bot-api"
@@ -15,57 +12,7 @@ import (
 	"github.com/0x0BSoD/torrBotGo/internal/transmission"
 )
 
-func handleCommand(update tgbotapi.Update, tClient *telegram.Client, trClient *transmission.Client, logger *zap.Logger) {
-	tClient.SetChatID(update.Message.Chat.ID)
-
-	switch update.Message.Command() {
-	case "help", "start":
-		fmt.Println(update.Message.Chat.ID)
-		if err := tClient.SendMessage("Telegram Bot as interface for transmission", telegram.MainKeyboard); err != nil {
-			tClient.SendError(fmt.Sprintf("send help failed, %v", err))
-			return
-		}
-	case "config":
-		config, err := trClient.SessionConfig()
-		if err != nil {
-			tClient.SendError(fmt.Sprintf("get config failed, %v", err))
-			return
-		}
-
-		var buf bytes.Buffer
-		if err := telegram.TmplConfig().Execute(&buf, config); err != nil {
-			tClient.SendError(fmt.Sprintf("tmpl config failed, %v", err))
-			return
-		}
-
-		if err := tClient.SendMessage(buf.String(), telegram.ConfigKbd); err != nil {
-			tClient.SendError(fmt.Sprintf("send config failed, %v", err))
-			return
-		}
-	case "status":
-		status, err := trClient.Status()
-		if err != nil {
-			tClient.SendError(fmt.Sprintf("get status failed, %v", err))
-			return
-		}
-
-		var buf bytes.Buffer
-		if err := telegram.TmplStatus().Execute(&buf, status); err != nil {
-			tClient.SendError(fmt.Sprintf("tmpl status failed, %v", err))
-			return
-		}
-
-		if err := tClient.SendMessage(buf.String(), nil); err != nil {
-			tClient.SendError(fmt.Sprintf("send help failed, %v", err))
-			return
-		}
-	default:
-		tClient.SendError("I don't know that command.")
-		return
-	}
-}
-
-func handleInline(update tgbotapi.Update, tClient *telegram.Client, trClient *transmission.Client, logger *zap.Logger) {
+func handleInline(update tgbotapi.Update, tClient *telegram.Client, trClient *transmission.Client) {
 	if update.CallbackQuery == nil || update.CallbackQuery.Data == "" {
 		return
 	}
@@ -73,28 +20,19 @@ func handleInline(update tgbotapi.Update, tClient *telegram.Client, trClient *tr
 	messageID := update.CallbackQuery.Message.MessageID
 	tClient.SetChatID(update.CallbackQuery.Message.Chat.ID)
 
-	if strings.HasPrefix(update.CallbackQuery.Data, "file+add-") {
-		text, err := trClient.AddByFile(update.CallbackQuery.Data)
+	if strings.Contains(update.CallbackQuery.Data, "add") {
+		var (
+			text string
+			err  error
+		)
+
+		if strings.HasPrefix(update.CallbackQuery.Data, "file+add-") {
+			text, err = trClient.AddByFile(update.CallbackQuery.Data)
+		} else {
+			text, err = trClient.AddByMagent(update.CallbackQuery.Data)
+		}
 		if err != nil {
-			tClient.SendError(fmt.Sprintf("add torrent by file failed, %v", err))
-			return
-		}
-
-		if err := tClient.RemoveMessage(messageID); err != nil {
-			tClient.SendError(fmt.Sprintf("remove message failed, %v", err))
-			return
-		}
-
-		if err := tClient.SendMessage(text, nil); err != nil {
-			tClient.SendError(fmt.Sprintf("send config failed, %v", err))
-			return
-		}
-	}
-
-	if strings.HasPrefix(update.CallbackQuery.Data, "add-") {
-		text, err := trClient.AddByMagent(update.CallbackQuery.Data)
-		if err != nil {
-			tClient.SendError(fmt.Sprintf("add torrent by magnet failed, %v", err))
+			tClient.SendError(fmt.Sprintf("add torrent failed, %v", err))
 			return
 		}
 
@@ -120,23 +58,9 @@ func handleInline(update tgbotapi.Update, tClient *telegram.Client, trClient *tr
 				return
 			}
 
-			var buf bytes.Buffer
-			if err := telegram.TmplTorrent().Execute(&buf, torrent); err != nil {
-				tClient.SendError(fmt.Sprintf("tmpl torrent failed, %v", err))
-				return
-			}
-
-			oldHash := glh.GetMD5Hash(strings.ReplaceAll(strings.ReplaceAll(update.CallbackQuery.Message.Text, "`", ""), "\n", ""))
-			newHash := glh.GetMD5Hash(strings.ReplaceAll(strings.ReplaceAll(buf.String(), "`", ""), "\n", ""))
-			if newHash == oldHash {
-				return
-			}
-
 			replyMarkup := telegram.TorrentDetailKbd(hash, torrent.StatusCode)
-			if err := tClient.SendEditedMessage(messageID, buf.String(), &replyMarkup); err != nil {
-				tClient.SendError(fmt.Sprintf("send torrent details failed, %v", err))
-				return
-			}
+
+			sendMessageWrapperHash(update.CallbackQuery.Message.Text, tClient, telegram.TmplTorrent(), replyMarkup, torrent)
 		case "delete":
 			torrent, err := trClient.Details(hash)
 			if err != nil {
@@ -305,91 +229,6 @@ func handleInline(update tgbotapi.Update, tClient *telegram.Client, trClient *tr
 		default:
 			tClient.SendError("I don't know that command. handleInline")
 			return
-		}
-	}
-}
-
-func handleMessage(update tgbotapi.Update, tClient *telegram.Client, trClient *transmission.Client, logger *zap.Logger) {
-	tClient.SetChatID(update.Message.Chat.ID)
-
-	if update.Message.Document != nil {
-		_url, err := tClient.BotAPI.GetFileDirectURL(update.Message.Document.FileID)
-		if err != nil {
-			tClient.SendError(fmt.Sprintf("get file URL failed, %v", err))
-			return
-		}
-		title, imgPath, err := trClient.AddByFileDialog(_url)
-		if err != nil {
-			tClient.SendError(fmt.Sprintf("add torrent by file failed, %v", err))
-			return
-		}
-
-		catList := extractKeys(trClient.Categories)
-		data := strings.Split(title, "::")
-		if len(data) >= 2 {
-			suggestedCat := data[0]
-			title = data[1]
-			if suggestedCat != "noop" {
-				catList = []string{
-					suggestedCat,
-				}
-			}
-		}
-		kbdAdd := telegram.TorrentAddKbd(true, catList)
-		if imgPath != "" {
-			if err := tClient.SendImagedMessage(title, imgPath, kbdAdd); err != nil {
-				tClient.SendError(fmt.Sprintf("send failed, %v", err))
-				return
-			}
-			return
-		}
-		if err := tClient.SendMessage(title, kbdAdd); err != nil {
-			tClient.SendError(fmt.Sprintf("send failed, %v", err))
-			return
-		}
-	} else if strings.HasPrefix(update.Message.Text, "magnet:") {
-		text, err := trClient.AddByMagnetDialog(update.Message.Text)
-		if err != nil {
-			tClient.SendError(fmt.Sprintf("add torrent by magent link failed, %v", err))
-			return
-		}
-
-		catList := extractKeys(trClient.Categories)
-		kbdAdd := telegram.TorrentAddKbd(false, catList)
-		if err := tClient.SendMessage(text, kbdAdd); err != nil {
-			tClient.SendError(fmt.Sprintf("send dialog failed, %v", err))
-			return
-		}
-	} else {
-		torrents, err := trClient.Torrents(update.Message.Text)
-		if err != nil {
-			if errors.Is(err, transmission.ErrorFilterNotFound) {
-				tClient.SendError("I don't know that command. handleMessage")
-				return
-			}
-			tClient.SendError(fmt.Sprintf("get torrents failed, %v", err))
-			return
-		}
-
-		if len(torrents) == 0 {
-			if err := tClient.SendMessage("Noting to show", nil); err != nil {
-				tClient.SendError(fmt.Sprintf("send failed, %v", err))
-				return
-			}
-		}
-
-		for hash, torrent := range torrents {
-			text, err := renderTorrent(torrent)
-			if err != nil {
-				tClient.SendError(fmt.Sprintf("render torrent template failed, %v", err))
-				return
-			}
-			replyMarkup := telegram.TorrentKbd(hash)
-
-			if err := tClient.SendMessage(text, replyMarkup); err != nil {
-				tClient.SendError(fmt.Sprintf("send torrent item failed, %v", err))
-				return
-			}
 		}
 	}
 }

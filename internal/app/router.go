@@ -29,13 +29,13 @@ func StartUpdateParser(ctx context.Context, cfg *config.Config, timeout time.Dur
 			switch {
 			case upd.Message == nil:
 				cfg.Logger.Sugar().Debugf("got inline message: %s", upd.CallbackQuery.Data)
-				handleInline(upd, cfg.Telegram.Client, cfg.Transmission.Client, cfg.Logger)
+				handleInline(upd, cfg.Telegram.Client, cfg.Transmission.Client)
 			case upd.Message.IsCommand():
 				cfg.Logger.Sugar().Debugf("got command message: %s", upd.Message.Command())
-				handleCommand(upd, cfg.Telegram.Client, cfg.Transmission.Client, cfg.Logger)
+				handleCommand(upd, cfg.Telegram.Client, cfg.Transmission.Client)
 			default:
 				cfg.Logger.Sugar().Debugf("got plain message: %s", upd.Message.Text)
-				handleMessage(upd, cfg.Telegram.Client, cfg.Transmission.Client, cfg.Logger)
+				handleMessage(upd, cfg.Telegram.Client, cfg.Transmission.Client)
 			}
 		}
 	}
