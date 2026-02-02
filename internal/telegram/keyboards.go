@@ -1,3 +1,5 @@
+// Package telegram provides Telegram Bot API integration for torrBotGo.
+// It handles message sending, inline keyboards, and communication with Telegram servers.
 package telegram
 
 import tgbotapi "github.com/0x0BSoD/telegram-bot-api"

@@ -1,3 +1,5 @@
+// Package config provides configuration management for torrBotGo.
+// It handles loading, parsing, and validating YAML configuration files.
 package config
 
 import (

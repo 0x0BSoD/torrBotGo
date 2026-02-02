@@ -1,3 +1,6 @@
+// Package logger provides structured logging configuration for torrBotGo.
+// It initializes and configures the Zap logging library with appropriate
+// settings for production and development environments.
 package logger
 
 import (

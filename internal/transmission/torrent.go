@@ -1,3 +1,6 @@
+// Package transmission provides Transmission RPC client integration for torrBotGo.
+// It handles all torrent-related operations including adding, removing, starting,
+// stopping torrents, and monitoring torrent status.
 package transmission
 
 import (
@@ -20,6 +23,16 @@ import (
 
 	glh "github.com/0x0BSoD/goLittleHelpers"
 	"github.com/0x0BSoD/transmission"
+)
+
+// Timeout constants for various operations
+const (
+	// StartStopTimeout is the maximum time to wait for a torrent to start or stop
+	StartStopTimeout = 10 * time.Second
+	// CacheUpdateInterval is how often to check for torrent state changes
+	CacheUpdateInterval = 5 * time.Second
+	// UpdateParserTimeout is the timeout for Telegram update polling
+	UpdateParserTimeout = 60 * time.Second
 )
 
 type Torrent struct {
@@ -65,6 +78,9 @@ var (
 	ErrorTorrentNotFound = errors.New("torrent not found")
 )
 
+// Torrents retrieves torrents based on the specified filter.
+// Supported filters: "All torrents", "Active torrents", "Not Active torrents".
+// Returns a map of torrent hashes to torrent objects or ErrorFilterNotFound for invalid filters.
 func (c *Client) Torrents(showFilter string) (map[string]*transmission.Torrent, error) {
 	items, _ := c.cache.Snapshot()
 
@@ -90,6 +106,9 @@ func (c *Client) Torrents(showFilter string) (map[string]*transmission.Torrent, 
 	return result, nil
 }
 
+// AddByMagnetDialog parses a magnet link and prepares it for addition.
+// Extracts the display name and trackers from the magnet link URI.
+// Stores the magnet link in temporary storage for later confirmation.
 func (c *Client) AddByMagnetDialog(input string) (string, error) {
 	var name string
 	var trackers []string
@@ -108,14 +127,17 @@ func (c *Client) AddByMagnetDialog(input string) (string, error) {
 		}
 	}
 
-	c.storage.magentLink = input
+	c.storage.magnetLink = input
 
 	return fmt.Sprintf("`%s`\nTrackers:`%s`", name, strings.Join(trackers, "\n")), nil
 }
 
-func (c *Client) AddByMagent(operation string) (string, error) {
+// AddByMagnet adds a previously parsed magnet link to Transmission.
+// The operation string should be in format "add-{category}" or "add-no" to cancel.
+// Returns success message with torrent details or error if addition fails.
+func (c *Client) AddByMagnet(operation string) (string, error) {
 	if operation == "add-no" {
-		c.storage.magentLink = ""
+		c.storage.magnetLink = ""
 		return "Okay", nil
 	}
 
@@ -124,7 +146,7 @@ func (c *Client) AddByMagent(operation string) (string, error) {
 
 	res, err := c.API.AddTorrent(transmission.AddTorrentArg{
 		DownloadDir: path,
-		Filename:    c.storage.magentLink,
+		Filename:    c.storage.magnetLink,
 		Paused:      false,
 	})
 	if err != nil {
@@ -135,6 +157,9 @@ func (c *Client) AddByMagent(operation string) (string, error) {
 	return fmt.Sprintf("Successfully added\n`%s`\n`%s`\nID:`%d`", pathKey, res.Name, res.ID), nil
 }
 
+// AddByFileDialog downloads and parses a torrent file from a URL.
+// Extracts torrent metadata and attempts to fetch additional information from RuTracker.
+// Returns: suggested category::torrent name, image path (if available), error.
 func (c *Client) AddByFileDialog(directURL string) (string, string, error) {
 	resp, err := http.Get(directURL)
 	if err != nil {
@@ -209,6 +234,9 @@ func (c *Client) AddByFileDialog(directURL string) (string, string, error) {
 	return bto.Info.Name, "", nil
 }
 
+// AddByFile adds a previously downloaded torrent file to Transmission.
+// The operation string should be in format "file+add-{category}" or "file+add-no" to cancel.
+// Returns success message with torrent details or error if addition fails.
 func (c *Client) AddByFile(operation string) (string, error) {
 	if operation == "file+add-no" {
 		c.storage.tFile = nil
@@ -233,6 +261,8 @@ func (c *Client) AddByFile(operation string) (string, error) {
 	return fmt.Sprintf("Successfully added\n`%s`\n`%s`\nID:`%d`", pathKey, res.Name, res.ID), nil
 }
 
+// Details retrieves detailed information about a specific torrent by its hash.
+// Returns a Torrent struct with formatted display information or error if not found.
 func (c *Client) Details(hash string) (Torrent, error) {
 	torrent, ok := c.cache.GetByHash(hash)
 	if !ok {
@@ -271,6 +301,9 @@ func (c *Client) Details(hash string) (Torrent, error) {
 	}, nil
 }
 
+// Delete removes a torrent from Transmission.
+// If rmfiles is true, also removes the downloaded data files.
+// Returns error if torrent not found or deletion fails.
 func (c *Client) Delete(hash string, rmfiles bool) error {
 	t, ok := c.cache.GetByHash(hash)
 	if !ok {
@@ -284,6 +317,8 @@ func (c *Client) Delete(hash string, rmfiles bool) error {
 	return nil
 }
 
+// GetFiles retrieves the list of files within a torrent.
+// Returns formatted file information including name, size, and download status.
 func (c *Client) GetFiles(hash string) []TorrentFilesItem {
 	t, _ := c.cache.GetByHash(hash)
 	files := *t.Files
@@ -301,6 +336,9 @@ func (c *Client) GetFiles(hash string) []TorrentFilesItem {
 	return result
 }
 
+// StartStop starts or stops a torrent based on the operation.
+// Valid operations: "start" to begin downloading/seeding, "stop" to pause.
+// Waits for the operation to complete with a timeout of 10 seconds.
 func (c *Client) StartStop(hash, op string) error {
 	t, _ := c.cache.GetByHash(hash)
 
@@ -315,7 +353,7 @@ func (c *Client) StartStop(hash, op string) error {
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), StartStopTimeout)
 	defer cancel()
 
 	ticker := time.NewTicker(1 * time.Second)
@@ -341,6 +379,9 @@ func (c *Client) StartStop(hash, op string) error {
 	}
 }
 
+// Priority changes the queue position of a torrent.
+// Valid actions: "prior-top", "prior-up", "prior-down", "prior-bottom".
+// Returns error if the operation fails or action is invalid.
 func (c *Client) Priority(hash string, action string) error {
 	t, _ := c.cache.GetByHash(hash)
 

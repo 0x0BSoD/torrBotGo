@@ -1,3 +1,6 @@
+// Package cache provides an in-memory cache system for torrBotGo.
+// It stores torrent state information and provides thread-safe access
+// to torrent data with efficient lookup capabilities.
 package cache
 
 import (

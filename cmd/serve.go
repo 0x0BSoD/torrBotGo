@@ -1,10 +1,11 @@
+// Package cmd provides the command-line interface for torrBotGo.
+// It uses Cobra CLI framework to define and handle commands.
 package cmd
 
 import (
 	"context"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/zap/zapcore"
@@ -13,7 +14,7 @@ import (
 	"github.com/0x0BSoD/torrBotGo/internal/app"
 	"github.com/0x0BSoD/torrBotGo/internal/events"
 	"github.com/0x0BSoD/torrBotGo/internal/telegram"
-	"github.com/0x0BSoD/torrBotGo/internal/transmission"
+	intTransmission "github.com/0x0BSoD/torrBotGo/internal/transmission"
 	"github.com/0x0BSoD/torrBotGo/pkg/logger"
 )
 
@@ -35,7 +36,7 @@ func init() {
 func serve(cmd *cobra.Command, args []string) {
 	config, err := config.New(configPath)
 	if err != nil {
-		fmt.Println(fmt.Errorf("unable to create a config: %v", err))
+		fmt.Println(fmt.Errorf("unable to create a config: %w", err))
 		os.Exit(1)
 	}
 
@@ -52,7 +53,7 @@ func serve(cmd *cobra.Command, args []string) {
 	tgClient.SetChatID(config.Telegram.ChatID)
 
 	config.Logger.Info("connecting to transmission API")
-	trCfg := transmission.Config{
+	trCfg := intTransmission.Config{
 		URI:        config.Transmission.Config.URI,
 		User:       config.Transmission.Config.User,
 		Password:   config.Transmission.Config.Password,
@@ -62,7 +63,7 @@ func serve(cmd *cobra.Command, args []string) {
 		Categories: config.App.Dirs.Categories,
 		MediaPath:  config.App.Dirs.Images,
 	}
-	trClient, err := transmission.New(&trCfg)
+	trClient, err := intTransmission.New(&trCfg)
 	if err != nil {
 		config.Logger.Sugar().Errorf("can't create Transmission API client: %w", err)
 		os.Exit(1)
@@ -76,7 +77,7 @@ func serve(cmd *cobra.Command, args []string) {
 	config.Logger.Info("starting Cache updater")
 	cacheCtx, cacheCancel := context.WithCancel(context.Background())
 	defer cacheCancel()
-	go trClient.StartCacheUpdater(cacheCtx, 5*time.Second)
+	go trClient.StartCacheUpdater(cacheCtx, intTransmission.CacheUpdateInterval)
 
 	config.Logger.Info("starting Event Bus")
 	busCtx, busCancel := context.WithCancel(context.Background())
@@ -89,5 +90,5 @@ func serve(cmd *cobra.Command, args []string) {
 	config.Logger.Info("starting TG update parser")
 	prsrCtx, prsrCancel := context.WithCancel(context.Background())
 	defer prsrCancel()
-	app.StartUpdateParser(prsrCtx, &config, 60*time.Second)
+	app.StartUpdateParser(prsrCtx, &config, intTransmission.UpdateParserTimeout)
 }

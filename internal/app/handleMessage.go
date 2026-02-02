@@ -1,3 +1,5 @@
+// Package app provides the core application logic for torrBotGo.
+// It handles Telegram message routing, command processing, and user interactions.
 package app
 
 import (
@@ -67,7 +69,7 @@ func (h *handler) handleMessage(update tgbotapi.Update) {
 	if strings.HasPrefix(update.Message.Text, "magnet:") {
 		text, err := h.trClient.AddByMagnetDialog(update.Message.Text)
 		if err != nil {
-			h.tClient.SendError(fmt.Sprintf("add torrent by magent link failed, %v", err))
+			h.tClient.SendError(fmt.Sprintf("add torrent by magnet link failed, %v", err))
 			return
 		}
 

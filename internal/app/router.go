@@ -1,3 +1,5 @@
+// Package app provides the core application logic for torrBotGo.
+// It handles Telegram message routing, command processing, and user interactions.
 package app
 
 import (
@@ -20,7 +22,9 @@ type handler struct {
 
 // StartUpdateParser - loop for read updates from Telegram
 func StartUpdateParser(ctx context.Context, cfg *config.Config, timeout time.Duration) error {
-	// TODO: Store offset
+	// TODO: Implement persistent offset storage to avoid missing updates after restart.
+	// Currently using offset 0 which retrieves all updates from the last 24 hours.
+	// Should store the last processed update ID and resume from that point.
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = int(timeout)
 
@@ -32,7 +36,7 @@ func StartUpdateParser(ctx context.Context, cfg *config.Config, timeout time.Dur
 
 	updates, err := cfg.Telegram.Client.BotAPI.GetUpdatesChan(u)
 	if err != nil {
-		return fmt.Errorf("getting tg updates failed: %s", err)
+		return fmt.Errorf("getting tg updates failed: %w", err)
 	}
 
 	for {

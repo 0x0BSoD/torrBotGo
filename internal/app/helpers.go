@@ -1,3 +1,5 @@
+// Package app provides the core application logic for torrBotGo.
+// It handles Telegram message routing, command processing, and user interactions.
 package app
 
 import (
@@ -131,7 +133,7 @@ func addTorrent(query string, messageID int, tClient *telegram.Client, trClient 
 	if strings.HasPrefix(query, "file+add-") {
 		text, err = trClient.AddByFile(query)
 	} else {
-		text, err = trClient.AddByMagent(query)
+		text, err = trClient.AddByMagnet(query)
 	}
 	if err != nil {
 		tClient.SendError(fmt.Sprintf("add torrent failed, %v", err))

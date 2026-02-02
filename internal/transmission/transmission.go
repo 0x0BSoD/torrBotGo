@@ -1,3 +1,6 @@
+// Package transmission provides Transmission RPC client integration for torrBotGo.
+// It handles all torrent-related operations including adding, removing, starting,
+// stopping torrents, and monitoring torrent status.
 package transmission
 
 import (
@@ -25,7 +28,7 @@ type Client struct {
 	mediaPath string
 	storage   struct {
 		tFile      []byte
-		magentLink string
+		magnetLink string
 	}
 }
 
@@ -125,7 +128,7 @@ func (c *Client) Status() (Status, error) {
 	downloadDir := c.API.Session.DownloadDir
 	freeSpaceData, err := c.API.FreeSpace(downloadDir)
 	if err != nil {
-		return Status{}, fmt.Errorf("error with %s: %s", downloadDir, err)
+		return Status{}, fmt.Errorf("error with %s: %w", downloadDir, err)
 	}
 
 	return Status{

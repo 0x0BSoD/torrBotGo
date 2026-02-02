@@ -1,3 +1,6 @@
+// Package transmission provides Transmission RPC client integration for torrBotGo.
+// It handles all torrent-related operations including adding, removing, starting,
+// stopping torrents, and monitoring torrent status.
 package transmission
 
 import (

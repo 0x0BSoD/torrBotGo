@@ -1,3 +1,5 @@
+// Package cmd provides the command-line interface for torrBotGo.
+// It uses Cobra CLI framework to define and handle commands.
 package cmd
 
 import (

@@ -1,3 +1,5 @@
+// Package app provides the core application logic for torrBotGo.
+// It handles Telegram message routing, command processing, and user interactions.
 package app
 
 import (
