@@ -1,0 +1,36 @@
+app:
+  error_media: "./tmp/media/error.png"  # Path to error image
+  auto_categories: true                 # Enable auto-categorization
+  dirs:
+    working: "./tmp"                    # Working directory
+    images: "./tmp/images"              # Directory for torrent images
+    download: "./tmp/downloads/"        # Base download directory
+    categories:
+      Films:
+        path: "Films"                   # Subdirectory for Films
+        matcher: "Зарубежное кино,Арт-хаус и авторское кино,HD Video,UHD Video,Мультфильмы"
+      TVSeries:
+        path: "TVSeries"                # Subdirectory for TV Series
+        matcher: "Сериалы,Мультсериалы"
+      Anime:
+        path: "Anime"                   # Subdirectory for Anime
+        matcher: "Аниме"
+      Soft:
+        path: "Soft"                    # Subdirectory for Software
+        matcher: "Программы и Дизайн"
+      Education:
+        path: "Education"               # Subdirectory for Educational content
+        matcher: "Обучение иностранным языкам,Обучающие видео"
+      Games:
+        path: "Games"                   # Subdirectory for Games
+        matcher: "Игры"
+
+telegram:
+  token: "YOUR_TELEGRAM_BOT_TOKEN"      # Bot token from @BotFather
+  chat_id: YOUR_CHAT_ID                 # Optional: Restrict to specific chat
+
+transmission:
+  config:
+    uri: "http://localhost:9091/transmission/rpc"  # Transmission RPC URL
+    user: "admin"                                  # Transmission username
+    password: "admin"                              # Transmission password
