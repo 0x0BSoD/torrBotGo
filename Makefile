@@ -36,7 +36,7 @@ all: build
 build:
 	@mkdir -p $(BIN_DIR)
 	CGO_ENABLED=$(CGO_ENABLED) GOOS=$(GOOS) GOARCH=$(GOARCH) \
-		go build $(GOFLAGS) -trimpath -ldflags='$(LDFLAGS)' -o $(OUT) .
+		go build $(GOFLAGS) -trimpath -ldflags='$(LDFLAGS)' -o $(OUT)$(if $(filter windows,$(GOOS)),.exe) .
 
 run: build
 	./$(OUT)
