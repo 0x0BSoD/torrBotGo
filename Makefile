@@ -2,6 +2,7 @@
 # Usage:
 #   make            # build
 #   make run         # run locally
+#   make test        # run tests
 #   make fmt vet lint
 #   make tidy
 #   make clean
@@ -28,7 +29,7 @@ LDFLAGS   := -s -w \
 	-X main.GitCommit=$(GIT_SHA) \
 	-X main.BuildDate=$(BUILD_DATE)
 
-.PHONY: all build run fmt vet lint tidy clean tools info
+.PHONY: all build run test fmt vet lint tidy clean tools info
 
 all: build
 
@@ -39,6 +40,9 @@ build:
 
 run: build
 	./$(OUT)
+
+test:
+	go test $(PKG)
 
 fmt:
 	go fmt $(PKG)
@@ -54,7 +58,7 @@ tools:
 	}
 
 lint: tools
-	golangci-lint run
+	@PATH="$$(go env GOPATH)/bin:$$PATH" golangci-lint run
 
 tidy:
 	go mod tidy

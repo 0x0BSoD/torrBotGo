@@ -2,13 +2,16 @@ module github.com/0x0BSoD/torrBotGo
 
 go 1.25.4
 
-require github.com/spf13/cobra v1.10.1
+require (
+	github.com/spf13/cobra v1.10.1
+	golang.org/x/net v0.47.0
+)
 
 require (
 	github.com/andybalholm/cascadia v1.3.3 // indirect
+	github.com/go-telegram-bot-api/telegram-bot-api v4.6.4+incompatible // indirect
 	github.com/technoweenie/multipartstreamer v1.0.1 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
-	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/text v0.31.0 // indirect
 )
 

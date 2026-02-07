@@ -1,0 +1,96 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [main, master]
+    tags: ["v*"]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+          cache: true
+
+      - name: Run golangci-lint
+        run: make lint
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+          cache: true
+
+      - name: Run tests
+        run: go test ./...
+
+  build:
+    name: Build
+    needs: [lint, test]
+    strategy:
+      matrix:
+        include:
+          - name: "Linux AMD64"
+            runs-on: ubuntu-latest
+            goos: linux
+            goarch: amd64
+          - name: "Linux ARM64"
+            runs-on: ubuntu-latest
+            goos: linux
+            goarch: arm64
+          - name: "macOS AMD64"
+            runs-on: macos-latest
+            goos: darwin
+            goarch: amd64
+          - name: "macOS ARM64"
+            runs-on: macos-latest
+            goos: darwin
+            goarch: arm64
+          - name: "Windows AMD64"
+            runs-on: windows-latest
+            goos: windows
+            goarch: amd64
+          - name: "Windows ARM64"
+            runs-on: windows-latest
+            goos: windows
+            goarch: arm64
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for git describe
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+          cache: true
+
+      - name: Build binary (${{ matrix.name }})
+        run: |
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} make build
+          ls -la bin/
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: torrbot-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: bin/torrbot
+          if-no-files-found: error
+          retention-days: 7
