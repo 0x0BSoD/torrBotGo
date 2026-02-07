@@ -8,14 +8,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Version information variables
 var (
 	Version   = "dev"
 	GitCommit = "dev"
 	BuildDate = "unknown"
 )
 
-// versionCmd represents the version command
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print version information",
@@ -27,13 +25,11 @@ var versionCmd = &cobra.Command{
 	},
 }
 
-// SetVersion sets the version, git commit, and build date for the application
 func SetVersion(version, gitCommit, buildDate string) {
 	Version = version
 	GitCommit = gitCommit
 	BuildDate = buildDate
 
-	// Update root command's Long description to include version info
 	rootCmd.Long = `Transmission Telegram Bot
 
 Version: ` + Version + `

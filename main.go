@@ -1,5 +1,5 @@
 /*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
+Copyright © 2025 0x0BSoD zlodey23@gmail.com
 
 torrBotGo - Transmission Telegram Bot
 Main entry point for the application.
@@ -19,7 +19,6 @@ var (
 // main is the entry point of the torrBotGo application.
 // It delegates execution to the Cobra CLI framework.
 func main() {
-	// Set version information in cmd package
 	cmd.SetVersion(Version, GitCommit, BuildDate)
 
 	cmd.Execute()
