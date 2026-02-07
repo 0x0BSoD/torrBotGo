@@ -7,20 +7,20 @@ Main entry point for the application.
 package main
 
 import (
-	"time"
-
 	"github.com/0x0BSoD/torrBotGo/cmd"
 )
 
 var (
-	version   = "2.0.1"
-	buildDate string
+	Version   = "2.0.1"
+	GitCommit = "dev"
+	BuildDate = "unknown"
 )
 
 // main is the entry point of the torrBotGo application.
 // It delegates execution to the Cobra CLI framework.
 func main() {
-	buildDate = time.Now().Format(time.RFC3339)
+	// Set version information in cmd package
+	cmd.SetVersion(Version, GitCommit, BuildDate)
 
 	cmd.Execute()
 }

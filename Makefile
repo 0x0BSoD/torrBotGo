@@ -17,13 +17,16 @@ CGO_ENABLED ?= 0
 
 # Version info (optional, but handy)
 GIT_SHA   := $(shell git rev-parse --short HEAD 2>/dev/null || echo "nogit")
+GIT_TAG   := $(shell git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+GIT_DESCR := $(shell git describe --tags 2>/dev/null || echo "v0.0.0-0-nogit")
 BUILD_DATE:= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 
 # Flags
 GOFLAGS   ?=
 LDFLAGS   := -s -w \
-	-X main.version=$(GIT_SHA) \
-	-X main.buildDate=$(BUILD_DATE)
+	-X main.Version=$(GIT_TAG) \
+	-X main.GitCommit=$(GIT_SHA) \
+	-X main.BuildDate=$(BUILD_DATE)
 
 .PHONY: all build run fmt vet lint tidy clean tools info
 

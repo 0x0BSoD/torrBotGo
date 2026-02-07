@@ -11,7 +11,10 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "torrbot",
 	Short: "TorrBot",
-	Long:  `Transmission Telegram Bot`,
+	Long: `Transmission Telegram Bot
+
+Version: ` + Version + `
+Built: ` + BuildDate,
 }
 
 func Execute() {
