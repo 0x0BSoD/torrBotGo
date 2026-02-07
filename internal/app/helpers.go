@@ -23,11 +23,6 @@ type input struct {
 	ErrorString string
 }
 
-type category struct {
-	Path    string
-	Matcher string
-}
-
 func renderTorrent(torrent *transmission.Torrent) (string, error) {
 	icon, status := intTransmission.ParseStatus(torrent.Status)
 
@@ -68,30 +63,6 @@ func sendMessageWrapper(tClient *telegram.Client, tmpl *template.Template, kbd, 
 			return
 		}
 		toSend = buf.String()
-	}
-
-	if err := tClient.SendMessage(toSend.(string), kbd); err != nil {
-		tClient.SendError(fmt.Sprintf("send failed, %v", err))
-		return
-	}
-}
-
-func sendMessageWrapperHash(oldMessage string, tClient *telegram.Client, tmpl *template.Template, kbd, data any) {
-	toSend := data
-
-	if tmpl != nil {
-		var buf bytes.Buffer
-		if err := tmpl.Execute(&buf, data); err != nil {
-			tClient.SendError(fmt.Sprintf("template execute failed, %v", err))
-			return
-		}
-		toSend = buf.String()
-	}
-
-	oldHash := glh.GetMD5Hash(strings.ReplaceAll(strings.ReplaceAll(oldMessage, "`", ""), "\n", ""))
-	newHash := glh.GetMD5Hash(strings.ReplaceAll(strings.ReplaceAll(toSend.(string), "`", ""), "\n", ""))
-	if newHash == oldHash {
-		return
 	}
 
 	if err := tClient.SendMessage(toSend.(string), kbd); err != nil {

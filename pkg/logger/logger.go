@@ -4,6 +4,9 @@
 package logger
 
 import (
+	"fmt"
+	"os"
+
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -18,8 +21,16 @@ func New(level zapcore.Level) *zap.Logger {
 		ErrorOutputPaths: []string{"stderr"},
 	}
 
-	logger, _ := config.Build()
-	defer logger.Sync()
+	logger, err := config.Build()
+	if err != nil {
+		return zap.NewNop()
+	}
+
+	defer func() {
+		if err := logger.Sync(); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to sync logger: %v\n", err)
+		}
+	}()
 
 	return logger
 }

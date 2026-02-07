@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
 	"github.com/0x0BSoD/torrBotGo/config"
@@ -90,5 +91,9 @@ func serve(cmd *cobra.Command, args []string) {
 	config.Logger.Info("starting TG update parser")
 	prsrCtx, prsrCancel := context.WithCancel(context.Background())
 	defer prsrCancel()
-	app.StartUpdateParser(prsrCtx, &config, intTransmission.UpdateParserTimeout)
+	if err := app.StartUpdateParser(prsrCtx, &config, intTransmission.UpdateParserTimeout); err != nil {
+		config.Logger.Error("failed to start update parser", zap.Error(err))
+		prsrCancel()
+		return
+	}
 }
