@@ -1,6 +1,5 @@
 # torrBotGo - Transmission Telegram Bot
 
-![Docker Automated build](https://img.shields.io/docker/automated/zlodey23/transmission-bot)
 ![Build](https://github.com/0x0BSoD/torrBotGo/workflows/Build/badge.svg)
 ![Release](https://github.com/0x0BSoD/torrBotGo/workflows/Release/badge.svg)
 
@@ -27,24 +26,9 @@ A feature-rich Telegram bot that provides a convenient interface for managing Tr
 - Transmission daemon running with RPC enabled
 - Telegram Bot Token (from [@BotFather](https://t.me/botfather))
 
-### Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/0x0BSoD/torrBotGo.git
-cd torrBotGo
-
-# Build the binary
-go build -o torrbot
-
-# Create configuration file
-cp test_config.yaml config.yaml
-# Edit config.yaml with your settings
-```
-
 ### Configuration
 
-Create a `config.yaml` file with the following structure:
+Configuration has the following structure:
 
 ```yaml
 app:
@@ -134,33 +118,86 @@ When viewing a torrent, you can:
 
 ## Docker Deployment
 
+### Building the Docker Image
+
+```bash
+# Clone the repository
+git clone https://github.com/0x0BSoD/torrBotGo.git
+cd torrBotGo
+
+# Build manually
+docker build -t torrbotgo .
+```
+
 ### Quick Docker Run
 
 ```bash
-# Create config.yaml as shown above
-docker run -v "$(pwd)/config.yaml":/config.yaml zlodey23/transmission-bot
+# Create config.yaml from the example
+cp config/config.yaml.example config.yaml
+# Edit config.yaml with your settings
+
+# Run the container
+docker run --rm \
+  -v "$(pwd)/config.yaml":/app/config.yaml:ro \
+  torrbotgo serve
 ```
 
-### Docker Compose Example
+### Using Docker Compose
 
 ```yaml
+# docker-compose.yml
 version: '3.8'
 services:
-  torrbot:
-    image: zlodey23/transmission-bot:latest
-    container_name: torrbot
+  torrbotgo:
+    build: .
+    container_name: torrbotgo
     restart: unless-stopped
     volumes:
-      - ./config.yaml:/config.yaml
-      - ./images:/app/images
-      - ./downloads:/mnt/downloads
+      - ./config.yaml:/app/config.yaml:ro
+      # Optional: mount download directory for persistence
+      # - ./downloads:/downloads
     environment:
       - TZ=UTC
 ```
 
-**Note**: The `images` directory cannot be `/tmp` in Docker containers.
+Run with:
+```bash
+docker-compose up -d
+```
 
-## Ansible Deployment
+### Docker Features
+
+- **Multi-stage build**: Small final image (~13MB) using distroless base
+- **Non-root user**: Runs as nonroot user for security
+- **Build arguments**: Supports version, git commit, and build date injection
+- **Timezone support**: Includes timezone data for proper time handling
+- **SSL certificates**: Includes CA certificates for secure connections
+
+### Environment Variables
+
+You can override configuration using environment variables:
+```bash
+docker run --rm \
+  -e TELEGRAM_TOKEN="your_token_here" \
+  -e TRANSMISSION_HOST="transmission" \
+  -e TRANSMISSION_PORT=9091 \
+  -e TRANSMISSION_USERNAME="admin" \
+  -e TRANSMISSION_PASSWORD="password" \
+  torrbotgo serve
+```
+
+### Building with Version Information
+
+```bash
+# Build manually with build args
+docker build \
+  --build-arg VERSION="2.0.1" \
+  --build-arg GIT_COMMIT="$(git rev-parse --short HEAD)" \
+  --build-arg BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  -t torrbotgo:2.0.1 .
+```
+
+## [UNMAINTAINED] Ansible Deployment
 
 An Ansible role is available for automated deployment:
 [https://github.com/0x0BSoD/ansible/tree/master/transmission](https://github.com/0x0BSoD/ansible/tree/master/transmission)
@@ -174,6 +211,22 @@ rpc_user: user
 rpc_password: pass123
 ```
 
+## Configuration Example
+
+See `config.example.yaml` for a complete configuration template with detailed comments.
+
+Quick start:
+```bash
+cp config/config.yaml.example config.yaml
+# Edit config.yaml with your settings
+```
+
+Key configuration sections:
+- `telegram`: Bot token and proxy settings
+- `transmission`: RPC connection details
+- `app`: Application behavior and directories
+- `logging`: Log level and format control
+
 ## Architecture
 
 ### Project Structure
@@ -181,40 +234,41 @@ rpc_password: pass123
 ```
 torrBotGo/
 ├── cmd/                    # CLI commands (Cobra framework)
-│   ├── root.go            # Root command definition
-│   └── serve.go           # Serve command implementation
-├── config/                # Configuration management
-│   └── config.go          # YAML config parsing and validation
-├── internal/              # Core application logic
-│   ├── app/              # Telegram message handlers
-│   │   ├── router.go     # Message routing
+│   ├── root.go             # Root command definition
+│   └── serve.go            # Serve command implementation
+├── config/                 # Configuration management
+│   ├── config.go           # YAML config parsing and validation
+│   └── config.yaml.example # Example configuration file
+├── internal/               # Core application logic
+│   ├── app/                # Telegram message handlers
+│   │   ├── router.go        # Message routing
 │   │   ├── handleCommand.go # Command handlers
 │   │   ├── handleMessage.go # Message handlers
 │   │   ├── handleInline.go  # Inline button handlers
-│   │   └── helpers.go    # Helper functions
+│   │   └── helpers.go       # Helper functions
 │   ├── telegram/         # Telegram API integration
 │   │   ├── telegram.go   # Telegram client
 │   │   ├── keyboards.go  # Inline keyboard definitions
 │   │   ├── templates.go  # Message templates
 │   │   └── helpers.go    # Telegram helpers
-│   ├── transmission/     # Transmission RPC client
+│   ├── transmission/       # Transmission RPC client
 │   │   ├── transmission.go # Transmission client
-│   │   ├── torrent.go    # Torrent operations
-│   │   ├── fetcher.go    # RuTracker web scraping
-│   │   ├── watcher.go    # Torrent state watcher
-│   │   └── helpers.go    # Transmission helpers
-│   ├── events/           # Event bus system
-│   │   ├── events.go     # Event definitions
-│   │   └── bus.go        # Event bus implementation
-│   └── cache/            # In-memory cache
-│       └── cache.go      # Torrent cache implementation
-├── pkg/logger/           # Logging utilities
-│   └── logger.go         # Zap logger configuration
-├── main.go               # Application entry point
-├── go.mod                # Go module definition
-├── go.sum                # Dependency checksums
-├── config.yaml           # Configuration template
-└── README.MD             # This file
+│   │   ├── torrent.go      # Torrent operations
+│   │   ├── fetcher.go      # RuTracker web scraping
+│   │   ├── watcher.go      # Torrent state watcher
+│   │   └── helpers.go      # Transmission helpers
+│   ├── events/       # Event bus system
+│   │   ├── events.go # Event definitions
+│   │   └── bus.go    # Event bus implementation
+│   └── cache/       # In-memory cache
+│       └── cache.go # Torrent cache implementation
+├── pkg/logger/   # Logging utilities
+│   └── logger.go # Zap logger configuration
+├── main.go         # Application entry point
+├── go.mod          # Go module definition
+├── go.sum          # Dependency checksums
+├── config.yaml     # Configuration template
+└── README.MD       # This file
 ```
 
 ### Key Components

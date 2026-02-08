@@ -1,0 +1,43 @@
+# .dockerignore for torrBotGo
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Build artifacts
+bin/
+dist/
+tmp/
+*.exe
+*.out
+*.test
+
+# Go vendor directory
+vendor/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Local configuration files (mount these at runtime)
+config.yaml
+config.yml
+*.yaml
+*.yml

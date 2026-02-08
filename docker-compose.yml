@@ -1,0 +1,56 @@
+version: "3.8"
+
+services:
+  torrbotgo:
+    build: .
+    container_name: torrbotgo
+    restart: unless-stopped
+    environment:
+      - TZ=UTC
+    # Mount configuration file from host
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      # Optional: mount download directory if you want persistent downloads
+      # - ./downloads:/downloads
+    # Environment variables can be used to override config
+    # environment:
+    #   - TELEGRAM_TOKEN=your_token_here
+    #   - TRANSMISSION_HOST=transmission:9091
+    #   - TRANSMISSION_USERNAME=admin
+    #   - TRANSMISSION_PASSWORD=password
+    # Uncomment if you need to expose ports (e.g., for webhooks)
+    # ports:
+    #   - "8080:8080"
+    # Health check (adjust based on your app's health endpoint)
+    # healthcheck:
+    #   test: ["CMD", "/app/torrbot", "health"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 40s
+    networks:
+      - torrbot-network
+
+  # Example Transmission service (optional - if you want to run Transmission alongside)
+  # transmission:
+  #   image: linuxserver/transmission:latest
+  #   container_name: transmission
+  #   restart: unless-stopped
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - TZ=UTC
+  #     - TRANSMISSION_WEB_HOME=/combustion-release/
+  #   volumes:
+  #     - ./transmission/config:/config
+  #     - ./downloads:/downloads
+  #   ports:
+  #     - "9091:9091"
+  #     - "51413:51413"
+  #     - "51413:51413/udp"
+  #   networks:
+  #     - torrbot-network
+
+networks:
+  torrbot-network:
+    driver: bridge
