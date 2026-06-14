@@ -75,10 +75,10 @@ func New(cfg *Config) (*Client, error) {
 	}
 
 	t, err := transmission.New(conf)
-	t.Context = context.TODO()
 	if err != nil {
 		return nil, err
 	}
+	t.Context = context.TODO()
 
 	if (transmission.SetSessionArgs{}) != cfg.Custom {
 		cfg.Logger.Info("setting custom transmission parameters")
